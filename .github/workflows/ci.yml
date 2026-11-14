@@ -1,0 +1,35 @@
+# Builds the panel and runs the Python tests.
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Enable pnpm
+        run: corepack enable pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build panel
+        run: |
+          pnpm run build
+          test -f dist/index.js
+
+      - uses: astral-sh/setup-uv@v6
+
+      - name: Run tests
+        run: uv run --python 3.14 --with pytest python -m pytest

@@ -1,0 +1,11 @@
+{
+  "name": "HotBar",
+  "author": "Neil Faulkner",
+  "flags": ["debug"],
+  "api_version": 1,
+  "publish": {
+    "tags": [],
+    "description": "HotBar plugin for Decky Loader.",
+    "image": "https://opengraph.githubassets.com/1/Neilfau/hotbar-decky"
+  }
+}
