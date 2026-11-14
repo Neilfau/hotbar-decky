@@ -35,4 +35,4 @@ jobs:
       - uses: astral-sh/setup-uv@v6
 
       - name: Run tests
-        run: uv run --python 3.14 --with pytest python -m pytest
+        run: uv run --python 3.14 --with pytest --with aiohttp python -m pytest
