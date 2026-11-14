@@ -40,6 +40,14 @@ The output is `dist/index.js`.
 
 ## Run the tests
 
+Type-check the panel:
+
+```bash
+pnpm exec tsc --noEmit
+```
+
+Run the Python tests:
+
 ```bash
 uv run --python 3.14 --with pytest python -m pytest
 ```

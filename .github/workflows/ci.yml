@@ -24,6 +24,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Type-check panel
+        run: pnpm exec tsc --noEmit
+
       - name: Build panel
         run: |
           pnpm run build
