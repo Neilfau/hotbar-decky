@@ -1,0 +1,50 @@
+{
+  "name": "hotbar-decky",
+  "version": "0.0.1",
+  "description": "HotBar plugin for Decky Loader",
+  "type": "module",
+  "scripts": {
+    "build": "rollup -c",
+    "watch": "rollup -c -w"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Neilfau/hotbar-decky.git"
+  },
+  "keywords": [
+    "decky",
+    "plugin",
+    "steam-deck"
+  ],
+  "author": "Neil Faulkner",
+  "license": "BSD-3-Clause",
+  "bugs": {
+    "url": "https://github.com/Neilfau/hotbar-decky/issues"
+  },
+  "homepage": "https://github.com/Neilfau/hotbar-decky#readme",
+  "devDependencies": {
+    "@decky/rollup": "^1.0.2",
+    "@decky/ui": "^4.11.0",
+    "@rollup/rollup-linux-x64-musl": "^4.53.3",
+    "@types/react": "19.1.1",
+    "@types/react-dom": "19.1.1",
+    "@types/react-router": "5.1.20",
+    "@types/webpack": "^5.28.5",
+    "rollup": "^4.53.3",
+    "typescript": "^5.6.2"
+  },
+  "dependencies": {
+    "@decky/api": "^1.1.3",
+    "react-icons": "^5.7.0",
+    "tslib": "^2.7.0"
+  },
+  "pnpm": {
+    "peerDependencyRules": {
+      "ignoreMissing": [
+        "react",
+        "react-dom"
+      ]
+    }
+  },
+  "packageManager": "pnpm@9.15.9"
+}
