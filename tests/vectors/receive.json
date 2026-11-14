@@ -1,0 +1,1910 @@
+{
+  "cases": [
+    {
+      "description": "A first message with an outstanding unexpired challenge registers its sender with a full window and spends the challenge.",
+      "expect": {
+        "after": {
+          "challenges": [
+            {
+              "challenge": "a0a1a2a3a4a5a6a7a8a9aaabacadaeaf",
+              "expiresAtMs": 999999
+            },
+            {
+              "challenge": "e0e1e2e3e4e5e6e7e8e9eaebecedeeef",
+              "expiresAtMs": 1030000
+            }
+          ],
+          "devices": [
+            {
+              "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+              "deviceKey": "a58541de08caa28ff5cef7fa71db0b23a233dbd02941215703c52844fff81647",
+              "lastPressTypeAcceptedMs": 1000000
+            }
+          ],
+          "senders": [
+            {
+              "bitmap": "ffffffffffffffff",
+              "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+              "highest": 7,
+              "senderId": "7272727272727272"
+            }
+          ]
+        },
+        "error": null,
+        "messageType": "press",
+        "response": null,
+        "result": "accept",
+        "retry": false,
+        "sealed": null,
+        "transportError": null
+      },
+      "kind": "receive",
+      "message": "0101d0d1d2d3d4d5d6d7d8d9dadbdcdddedf72727272727272720000000000000007c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3017ed91be9159f7505df69c3f02e1da54d6064bf3cac182ecea298fb71da276e8f209563e1ce47540c1e8c157973cbe527c7986fc438348a5e0a90b0bc9a9d24a385d12d60893b0bce5c27b7eb7ee2e2bc5154ad33c13368eb74d4b7219a028c08",
+      "name": "accept-registering-first-message",
+      "receiver": "plugin",
+      "state": {
+        "challenges": [
+          {
+            "challenge": "a0a1a2a3a4a5a6a7a8a9aaabacadaeaf",
+            "expiresAtMs": 999999
+          },
+          {
+            "challenge": "c0c1c2c3c4c5c6c7c8c9cacbcccdcecf",
+            "expiresAtMs": 1012000
+          },
+          {
+            "challenge": "e0e1e2e3e4e5e6e7e8e9eaebecedeeef",
+            "expiresAtMs": 1030000
+          }
+        ],
+        "devices": [
+          {
+            "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+            "deviceKey": "a58541de08caa28ff5cef7fa71db0b23a233dbd02941215703c52844fff81647",
+            "lastPressTypeAcceptedMs": null
+          }
+        ],
+        "nowMs": 1000000,
+        "senders": []
+      }
+    },
+    {
+      "description": "A counter two above the highest shifts the bitmap by two and sets bit 0.",
+      "expect": {
+        "after": {
+          "challenges": [],
+          "devices": [
+            {
+              "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+              "deviceKey": "a58541de08caa28ff5cef7fa71db0b23a233dbd02941215703c52844fff81647",
+              "lastPressTypeAcceptedMs": 1000000
+            }
+          ],
+          "senders": [
+            {
+              "bitmap": "b4ea571386dca3e5",
+              "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+              "highest": 1002,
+              "senderId": "7171717171717171"
+            }
+          ]
+        },
+        "error": null,
+        "messageType": "press",
+        "response": null,
+        "result": "accept",
+        "retry": false,
+        "sealed": null,
+        "transportError": null
+      },
+      "kind": "receive",
+      "message": "0101d0d1d2d3d4d5d6d7d8d9dadbdcdddedf717171717171717100000000000003eac3c3c3c3c3c3c3c3c3c3c3c3c3c3c302def8347b7d1e4c70b07c2d2fee4baa7f4f90503d77e71cd8846af1da0065dc4f73ac1be2f51c5a6065a774f0fb60795886ca",
+      "name": "accept-counter-advance",
+      "receiver": "plugin",
+      "state": {
+        "challenges": [],
+        "devices": [
+          {
+            "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+            "deviceKey": "a58541de08caa28ff5cef7fa71db0b23a233dbd02941215703c52844fff81647",
+            "lastPressTypeAcceptedMs": 995000
+          }
+        ],
+        "nowMs": 1000000,
+        "senders": [
+          {
+            "bitmap": "6d3a95c4e1b728f9",
+            "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+            "highest": 1000,
+            "senderId": "7171717171717171"
+          }
+        ]
+      }
+    },
+    {
+      "description": "A counter 64 above the highest clears the window to bit 0 only.",
+      "expect": {
+        "after": {
+          "challenges": [],
+          "devices": [
+            {
+              "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+              "deviceKey": "a58541de08caa28ff5cef7fa71db0b23a233dbd02941215703c52844fff81647",
+              "lastPressTypeAcceptedMs": 1000000
+            }
+          ],
+          "senders": [
+            {
+              "bitmap": "0000000000000001",
+              "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+              "highest": 1064,
+              "senderId": "7171717171717171"
+            }
+          ]
+        },
+        "error": null,
+        "messageType": "press",
+        "response": null,
+        "result": "accept",
+        "retry": false,
+        "sealed": null,
+        "transportError": null
+      },
+      "kind": "receive",
+      "message": "0101d0d1d2d3d4d5d6d7d8d9dadbdcdddedf71717171717171710000000000000428c3c3c3c3c3c3c3c3c3c3c3c3c3c3c30364c90144901cf600b0b39b135a1f15b823f525fb6b14a1f1b810cd4c7f80ff6e4b6bcb664ade6acd6911e42a5c920e11356d",
+      "name": "accept-counter-advance-beyond-window",
+      "receiver": "plugin",
+      "state": {
+        "challenges": [],
+        "devices": [
+          {
+            "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+            "deviceKey": "a58541de08caa28ff5cef7fa71db0b23a233dbd02941215703c52844fff81647",
+            "lastPressTypeAcceptedMs": 995000
+          }
+        ],
+        "nowMs": 1000000,
+        "senders": [
+          {
+            "bitmap": "6d3a95c4e1b728f9",
+            "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+            "highest": 1000,
+            "senderId": "7171717171717171"
+          }
+        ]
+      }
+    },
+    {
+      "description": "An unseen counter two below the highest is accepted and sets bit 2.",
+      "expect": {
+        "after": {
+          "challenges": [],
+          "devices": [
+            {
+              "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+              "deviceKey": "a58541de08caa28ff5cef7fa71db0b23a233dbd02941215703c52844fff81647",
+              "lastPressTypeAcceptedMs": 1000000
+            }
+          ],
+          "senders": [
+            {
+              "bitmap": "6d3a95c4e1b728fd",
+              "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+              "highest": 1000,
+              "senderId": "7171717171717171"
+            }
+          ]
+        },
+        "error": null,
+        "messageType": "press",
+        "response": null,
+        "result": "accept",
+        "retry": false,
+        "sealed": null,
+        "transportError": null
+      },
+      "kind": "receive",
+      "message": "0101d0d1d2d3d4d5d6d7d8d9dadbdcdddedf717171717171717100000000000003e6c3c3c3c3c3c3c3c3c3c3c3c3c3c3c304f677655a9c03f4f54764d01b2ae5cdc954701439ff60b0af4c63d9248cb911a901d573d89e3db2fc6d3a3fbcfd970882f4ba",
+      "name": "accept-out-of-order-in-window",
+      "receiver": "plugin",
+      "state": {
+        "challenges": [],
+        "devices": [
+          {
+            "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+            "deviceKey": "a58541de08caa28ff5cef7fa71db0b23a233dbd02941215703c52844fff81647",
+            "lastPressTypeAcceptedMs": 995000
+          }
+        ],
+        "nowMs": 1000000,
+        "senders": [
+          {
+            "bitmap": "6d3a95c4e1b728f9",
+            "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+            "highest": 1000,
+            "senderId": "7171717171717171"
+          }
+        ]
+      }
+    },
+    {
+      "description": "An unseen counter 63 below the highest, the oldest one in the window, is accepted and sets bit 63.",
+      "expect": {
+        "after": {
+          "challenges": [],
+          "devices": [
+            {
+              "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+              "deviceKey": "a58541de08caa28ff5cef7fa71db0b23a233dbd02941215703c52844fff81647",
+              "lastPressTypeAcceptedMs": 1000000
+            }
+          ],
+          "senders": [
+            {
+              "bitmap": "ed3a95c4e1b728f9",
+              "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+              "highest": 1000,
+              "senderId": "7171717171717171"
+            }
+          ]
+        },
+        "error": null,
+        "messageType": "press",
+        "response": null,
+        "result": "accept",
+        "retry": false,
+        "sealed": null,
+        "transportError": null
+      },
+      "kind": "receive",
+      "message": "0101d0d1d2d3d4d5d6d7d8d9dadbdcdddedf717171717171717100000000000003a9c3c3c3c3c3c3c3c3c3c3c3c3c3c3c305f08ed99f0a0c5f29a83b57ae3535d3ce8464027616fa538e65106ce2edd433d9f90e9920fb41b6106863fe8076442671a715",
+      "name": "accept-window-lower-edge",
+      "receiver": "plugin",
+      "state": {
+        "challenges": [],
+        "devices": [
+          {
+            "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+            "deviceKey": "a58541de08caa28ff5cef7fa71db0b23a233dbd02941215703c52844fff81647",
+            "lastPressTypeAcceptedMs": 995000
+          }
+        ],
+        "nowMs": 1000000,
+        "senders": [
+          {
+            "bitmap": "6d3a95c4e1b728f9",
+            "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+            "highest": 1000,
+            "senderId": "7171717171717171"
+          }
+        ]
+      }
+    },
+    {
+      "description": "A press exactly 100 ms after the last accepted press or type passes the gap rule.",
+      "expect": {
+        "after": {
+          "challenges": [],
+          "devices": [
+            {
+              "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+              "deviceKey": "a58541de08caa28ff5cef7fa71db0b23a233dbd02941215703c52844fff81647",
+              "lastPressTypeAcceptedMs": 1000000
+            }
+          ],
+          "senders": [
+            {
+              "bitmap": "da752b89c36e51f3",
+              "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+              "highest": 1001,
+              "senderId": "7171717171717171"
+            }
+          ]
+        },
+        "error": null,
+        "messageType": "press",
+        "response": null,
+        "result": "accept",
+        "retry": false,
+        "sealed": null,
+        "transportError": null
+      },
+      "kind": "receive",
+      "message": "0101d0d1d2d3d4d5d6d7d8d9dadbdcdddedf717171717171717100000000000003e9c3c3c3c3c3c3c3c3c3c3c3c3c3c3c306cf0c3e61c4cf6c79ad5b02ffb43794d70a6abf02859981894b96328b195af975e1b51bc15b066af903fdd4719b4675890259",
+      "name": "accept-gap-boundary",
+      "receiver": "plugin",
+      "state": {
+        "challenges": [],
+        "devices": [
+          {
+            "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+            "deviceKey": "a58541de08caa28ff5cef7fa71db0b23a233dbd02941215703c52844fff81647",
+            "lastPressTypeAcceptedMs": 999900
+          }
+        ],
+        "nowMs": 1000000,
+        "senders": [
+          {
+            "bitmap": "6d3a95c4e1b728f9",
+            "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+            "highest": 1000,
+            "senderId": "7171717171717171"
+          }
+        ]
+      }
+    },
+    {
+      "description": "A 65-byte message, one byte under the minimum, is rejected on length alone.",
+      "expect": {
+        "after": {
+          "challenges": [],
+          "devices": [
+            {
+              "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+              "deviceKey": "a58541de08caa28ff5cef7fa71db0b23a233dbd02941215703c52844fff81647",
+              "lastPressTypeAcceptedMs": null
+            }
+          ],
+          "senders": [
+            {
+              "bitmap": "6d3a95c4e1b728f9",
+              "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+              "highest": 1000,
+              "senderId": "7171717171717171"
+            }
+          ]
+        },
+        "error": "bad_message",
+        "messageType": null,
+        "response": {
+          "error": "bad_message"
+        },
+        "result": "reject",
+        "retry": false,
+        "sealed": false,
+        "transportError": "failed"
+      },
+      "kind": "receive",
+      "message": "0101d0d1d2d3d4d5d6d7d8d9dadbdcdddedf717171717171717100000000000003e9c3c3c3c3c3c3c3c3c3c3c3c3c3c3c307d740e7a1bbe8e50abbdfe7ee7fce85",
+      "name": "reject-too-short",
+      "receiver": "plugin",
+      "state": {
+        "challenges": [],
+        "devices": [
+          {
+            "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+            "deviceKey": "a58541de08caa28ff5cef7fa71db0b23a233dbd02941215703c52844fff81647",
+            "lastPressTypeAcceptedMs": null
+          }
+        ],
+        "nowMs": 1000000,
+        "senders": [
+          {
+            "bitmap": "6d3a95c4e1b728f9",
+            "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+            "highest": 1000,
+            "senderId": "7171717171717171"
+          }
+        ]
+      }
+    },
+    {
+      "description": "Header version 0 is malformed even though the message is sealed correctly with it.",
+      "expect": {
+        "after": {
+          "challenges": [],
+          "devices": [
+            {
+              "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+              "deviceKey": "a58541de08caa28ff5cef7fa71db0b23a233dbd02941215703c52844fff81647",
+              "lastPressTypeAcceptedMs": null
+            }
+          ],
+          "senders": [
+            {
+              "bitmap": "6d3a95c4e1b728f9",
+              "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+              "highest": 1000,
+              "senderId": "7171717171717171"
+            }
+          ]
+        },
+        "error": "bad_message",
+        "messageType": null,
+        "response": {
+          "error": "bad_message"
+        },
+        "result": "reject",
+        "retry": false,
+        "sealed": false,
+        "transportError": "failed"
+      },
+      "kind": "receive",
+      "message": "0001d0d1d2d3d4d5d6d7d8d9dadbdcdddedf717171717171717100000000000003e9c3c3c3c3c3c3c3c3c3c3c3c3c3c3c308e417e8bc163dc5124e310d0e59587a8f2bd4d97ed6dbf2b562bf2007233cfe5627463a97ea34c13d673802ed768b524ff7",
+      "name": "reject-version-zero",
+      "receiver": "plugin",
+      "state": {
+        "challenges": [],
+        "devices": [
+          {
+            "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+            "deviceKey": "a58541de08caa28ff5cef7fa71db0b23a233dbd02941215703c52844fff81647",
+            "lastPressTypeAcceptedMs": null
+          }
+        ],
+        "nowMs": 1000000,
+        "senders": [
+          {
+            "bitmap": "6d3a95c4e1b728f9",
+            "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+            "highest": 1000,
+            "senderId": "7171717171717171"
+          }
+        ]
+      }
+    },
+    {
+      "description": "Header version 2 is too new even though the message is sealed correctly with it, and the plugin names its highest version.",
+      "expect": {
+        "after": {
+          "challenges": [],
+          "devices": [
+            {
+              "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+              "deviceKey": "a58541de08caa28ff5cef7fa71db0b23a233dbd02941215703c52844fff81647",
+              "lastPressTypeAcceptedMs": null
+            }
+          ],
+          "senders": [
+            {
+              "bitmap": "6d3a95c4e1b728f9",
+              "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+              "highest": 1000,
+              "senderId": "7171717171717171"
+            }
+          ]
+        },
+        "error": "version_too_new",
+        "messageType": null,
+        "response": {
+          "error": "version_too_new",
+          "maxVersion": 1
+        },
+        "result": "reject",
+        "retry": false,
+        "sealed": false,
+        "transportError": "versionMismatch"
+      },
+      "kind": "receive",
+      "message": "0201d0d1d2d3d4d5d6d7d8d9dadbdcdddedf717171717171717100000000000003e9c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3096950c4c8c5827f5abcbb0ffd202a194fda49e794f0fbfb3787a8ce38fe52a7c9c7e5cc02da02dc32d23a5bb0b1459bbf61",
+      "name": "reject-version-too-new",
+      "receiver": "plugin",
+      "state": {
+        "challenges": [],
+        "devices": [
+          {
+            "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+            "deviceKey": "a58541de08caa28ff5cef7fa71db0b23a233dbd02941215703c52844fff81647",
+            "lastPressTypeAcceptedMs": null
+          }
+        ],
+        "nowMs": 1000000,
+        "senders": [
+          {
+            "bitmap": "6d3a95c4e1b728f9",
+            "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+            "highest": 1000,
+            "senderId": "7171717171717171"
+          }
+        ]
+      }
+    },
+    {
+      "description": "A message with the plugin-to-phone direction byte is refused although its device id is valid.",
+      "expect": {
+        "after": {
+          "challenges": [],
+          "devices": [
+            {
+              "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+              "deviceKey": "a58541de08caa28ff5cef7fa71db0b23a233dbd02941215703c52844fff81647",
+              "lastPressTypeAcceptedMs": null
+            }
+          ],
+          "senders": [
+            {
+              "bitmap": "6d3a95c4e1b728f9",
+              "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+              "highest": 1000,
+              "senderId": "7171717171717171"
+            }
+          ]
+        },
+        "error": "bad_direction",
+        "messageType": null,
+        "response": {
+          "error": "bad_direction"
+        },
+        "result": "reject",
+        "retry": false,
+        "sealed": false,
+        "transportError": "failed"
+      },
+      "kind": "receive",
+      "message": "0102d0d1d2d3d4d5d6d7d8d9dadbdcdddedf717171717171717100000000000003e9c3c3c3c3c3c3c3c3c3c3c3c3c3c3c30a2cb46053fa7d593c3f88f354d6e2343b876c4f0ddad628a6362aa3f3e338315456c14e05a2690321f32ce9cae662571342",
+      "name": "reject-wrong-direction",
+      "receiver": "plugin",
+      "state": {
+        "challenges": [],
+        "devices": [
+          {
+            "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+            "deviceKey": "a58541de08caa28ff5cef7fa71db0b23a233dbd02941215703c52844fff81647",
+            "lastPressTypeAcceptedMs": null
+          }
+        ],
+        "nowMs": 1000000,
+        "senders": [
+          {
+            "bitmap": "6d3a95c4e1b728f9",
+            "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+            "highest": 1000,
+            "senderId": "7171717171717171"
+          }
+        ]
+      }
+    },
+    {
+      "description": "A message naming a device id the plugin does not hold is refused before any key is used.",
+      "expect": {
+        "after": {
+          "challenges": [],
+          "devices": [
+            {
+              "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+              "deviceKey": "a58541de08caa28ff5cef7fa71db0b23a233dbd02941215703c52844fff81647",
+              "lastPressTypeAcceptedMs": null
+            }
+          ],
+          "senders": [
+            {
+              "bitmap": "6d3a95c4e1b728f9",
+              "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+              "highest": 1000,
+              "senderId": "7171717171717171"
+            }
+          ]
+        },
+        "error": "unknown_device",
+        "messageType": null,
+        "response": {
+          "error": "unknown_device"
+        },
+        "result": "reject",
+        "retry": false,
+        "sealed": false,
+        "transportError": "unauthorized"
+      },
+      "kind": "receive",
+      "message": "0101eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee717171717171717100000000000003e9c3c3c3c3c3c3c3c3c3c3c3c3c3c3c30b89fdd6caba9ba85a27db590db26b3320d11e84fc2438a893c7fce79287d1cb76a8b319b2652f89044ddd17bd89703dd67e",
+      "name": "reject-unknown-device",
+      "receiver": "plugin",
+      "state": {
+        "challenges": [],
+        "devices": [
+          {
+            "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+            "deviceKey": "a58541de08caa28ff5cef7fa71db0b23a233dbd02941215703c52844fff81647",
+            "lastPressTypeAcceptedMs": null
+          }
+        ],
+        "nowMs": 1000000,
+        "senders": [
+          {
+            "bitmap": "6d3a95c4e1b728f9",
+            "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+            "highest": 1000,
+            "senderId": "7171717171717171"
+          }
+        ]
+      }
+    },
+    {
+      "description": "Flipping one bit of the tag makes the AEAD open fail.",
+      "expect": {
+        "after": {
+          "challenges": [],
+          "devices": [
+            {
+              "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+              "deviceKey": "a58541de08caa28ff5cef7fa71db0b23a233dbd02941215703c52844fff81647",
+              "lastPressTypeAcceptedMs": null
+            }
+          ],
+          "senders": [
+            {
+              "bitmap": "6d3a95c4e1b728f9",
+              "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+              "highest": 1000,
+              "senderId": "7171717171717171"
+            }
+          ]
+        },
+        "error": "auth_failed",
+        "messageType": null,
+        "response": {
+          "error": "auth_failed"
+        },
+        "result": "reject",
+        "retry": false,
+        "sealed": false,
+        "transportError": "unauthorized"
+      },
+      "kind": "receive",
+      "message": "0101d0d1d2d3d4d5d6d7d8d9dadbdcdddedf717171717171717100000000000003e9c3c3c3c3c3c3c3c3c3c3c3c3c3c3c307d740e7a1bbe8e50abbdfe7ee7fce85b1a70481fc6642d7691bcfe840de7c0b3736c7d1c6e24b87e69d52ecb9e41be38e71",
+      "name": "reject-tampered-tag",
+      "receiver": "plugin",
+      "state": {
+        "challenges": [],
+        "devices": [
+          {
+            "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+            "deviceKey": "a58541de08caa28ff5cef7fa71db0b23a233dbd02941215703c52844fff81647",
+            "lastPressTypeAcceptedMs": null
+          }
+        ],
+        "nowMs": 1000000,
+        "senders": [
+          {
+            "bitmap": "6d3a95c4e1b728f9",
+            "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+            "highest": 1000,
+            "senderId": "7171717171717171"
+          }
+        ]
+      }
+    },
+    {
+      "description": "Flipping one bit of the sender id in the header makes the AEAD open fail, since the header is the associated data.",
+      "expect": {
+        "after": {
+          "challenges": [],
+          "devices": [
+            {
+              "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+              "deviceKey": "a58541de08caa28ff5cef7fa71db0b23a233dbd02941215703c52844fff81647",
+              "lastPressTypeAcceptedMs": null
+            }
+          ],
+          "senders": [
+            {
+              "bitmap": "6d3a95c4e1b728f9",
+              "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+              "highest": 1000,
+              "senderId": "7171717171717171"
+            }
+          ]
+        },
+        "error": "auth_failed",
+        "messageType": null,
+        "response": {
+          "error": "auth_failed"
+        },
+        "result": "reject",
+        "retry": false,
+        "sealed": false,
+        "transportError": "unauthorized"
+      },
+      "kind": "receive",
+      "message": "0101d0d1d2d3d4d5d6d7d8d9dadbdcdddedf707171717171717100000000000003e9c3c3c3c3c3c3c3c3c3c3c3c3c3c3c307d740e7a1bbe8e50abbdfe7ee7fce85b1a70481fc6642d7691bcfe840de7c0b3736c7d1c6e24b87e69d52ecb9e41be38e70",
+      "name": "reject-tampered-header",
+      "receiver": "plugin",
+      "state": {
+        "challenges": [],
+        "devices": [
+          {
+            "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+            "deviceKey": "a58541de08caa28ff5cef7fa71db0b23a233dbd02941215703c52844fff81647",
+            "lastPressTypeAcceptedMs": null
+          }
+        ],
+        "nowMs": 1000000,
+        "senders": [
+          {
+            "bitmap": "6d3a95c4e1b728f9",
+            "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+            "highest": 1000,
+            "senderId": "7171717171717171"
+          }
+        ]
+      }
+    },
+    {
+      "description": "A message sealed under another key fails the AEAD open although its header names the right device.",
+      "expect": {
+        "after": {
+          "challenges": [],
+          "devices": [
+            {
+              "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+              "deviceKey": "a58541de08caa28ff5cef7fa71db0b23a233dbd02941215703c52844fff81647",
+              "lastPressTypeAcceptedMs": null
+            }
+          ],
+          "senders": [
+            {
+              "bitmap": "6d3a95c4e1b728f9",
+              "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+              "highest": 1000,
+              "senderId": "7171717171717171"
+            }
+          ]
+        },
+        "error": "auth_failed",
+        "messageType": null,
+        "response": {
+          "error": "auth_failed"
+        },
+        "result": "reject",
+        "retry": false,
+        "sealed": false,
+        "transportError": "unauthorized"
+      },
+      "kind": "receive",
+      "message": "0101d0d1d2d3d4d5d6d7d8d9dadbdcdddedf717171717171717100000000000003e9c3c3c3c3c3c3c3c3c3c3c3c3c3c3c30c9cd1dd5f97b2b57534bc780d57e53922fb68a6b3d8acc3a97382fc323fb0660bc83e509abeaeec329ba2bcb55b7dce06c6",
+      "name": "reject-wrong-key",
+      "receiver": "plugin",
+      "state": {
+        "challenges": [],
+        "devices": [
+          {
+            "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+            "deviceKey": "a58541de08caa28ff5cef7fa71db0b23a233dbd02941215703c52844fff81647",
+            "lastPressTypeAcceptedMs": null
+          }
+        ],
+        "nowMs": 1000000,
+        "senders": [
+          {
+            "bitmap": "6d3a95c4e1b728f9",
+            "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+            "highest": 1000,
+            "senderId": "7171717171717171"
+          }
+        ]
+      }
+    },
+    {
+      "description": "An authentic message whose body is not JSON gets a sealed bad_body before the window is touched.",
+      "expect": {
+        "after": {
+          "challenges": [],
+          "devices": [
+            {
+              "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+              "deviceKey": "a58541de08caa28ff5cef7fa71db0b23a233dbd02941215703c52844fff81647",
+              "lastPressTypeAcceptedMs": null
+            }
+          ],
+          "senders": [
+            {
+              "bitmap": "6d3a95c4e1b728f9",
+              "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+              "highest": 1000,
+              "senderId": "7171717171717171"
+            }
+          ]
+        },
+        "error": "bad_body",
+        "messageType": null,
+        "response": {
+          "counter": 1001,
+          "error": "bad_body",
+          "sender": "7171717171717171",
+          "type": "error"
+        },
+        "result": "reject",
+        "retry": false,
+        "sealed": true,
+        "transportError": "failed"
+      },
+      "kind": "receive",
+      "message": "0101d0d1d2d3d4d5d6d7d8d9dadbdcdddedf717171717171717100000000000003e9c3c3c3c3c3c3c3c3c3c3c3c3c3c3c30db8127db2cb71e662a9cdb2275e5d6487b53be34f2fde8146",
+      "name": "reject-body-not-json",
+      "receiver": "plugin",
+      "state": {
+        "challenges": [],
+        "devices": [
+          {
+            "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+            "deviceKey": "a58541de08caa28ff5cef7fa71db0b23a233dbd02941215703c52844fff81647",
+            "lastPressTypeAcceptedMs": null
+          }
+        ],
+        "nowMs": 1000000,
+        "senders": [
+          {
+            "bitmap": "6d3a95c4e1b728f9",
+            "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+            "highest": 1000,
+            "senderId": "7171717171717171"
+          }
+        ]
+      }
+    },
+    {
+      "description": "An authentic message whose body is a JSON array gets a sealed bad_body before the window is touched.",
+      "expect": {
+        "after": {
+          "challenges": [],
+          "devices": [
+            {
+              "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+              "deviceKey": "a58541de08caa28ff5cef7fa71db0b23a233dbd02941215703c52844fff81647",
+              "lastPressTypeAcceptedMs": null
+            }
+          ],
+          "senders": [
+            {
+              "bitmap": "6d3a95c4e1b728f9",
+              "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+              "highest": 1000,
+              "senderId": "7171717171717171"
+            }
+          ]
+        },
+        "error": "bad_body",
+        "messageType": null,
+        "response": {
+          "counter": 1001,
+          "error": "bad_body",
+          "sender": "7171717171717171",
+          "type": "error"
+        },
+        "result": "reject",
+        "retry": false,
+        "sealed": true,
+        "transportError": "failed"
+      },
+      "kind": "receive",
+      "message": "0101d0d1d2d3d4d5d6d7d8d9dadbdcdddedf717171717171717100000000000003e9c3c3c3c3c3c3c3c3c3c3c3c3c3c3c30e4c96553002d8e2df85457c8233081d6eea5e785788",
+      "name": "reject-body-not-object",
+      "receiver": "plugin",
+      "state": {
+        "challenges": [],
+        "devices": [
+          {
+            "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+            "deviceKey": "a58541de08caa28ff5cef7fa71db0b23a233dbd02941215703c52844fff81647",
+            "lastPressTypeAcceptedMs": null
+          }
+        ],
+        "nowMs": 1000000,
+        "senders": [
+          {
+            "bitmap": "6d3a95c4e1b728f9",
+            "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+            "highest": 1000,
+            "senderId": "7171717171717171"
+          }
+        ]
+      }
+    },
+    {
+      "description": "The first message of an unregistered sender without a challenge field is refused and no outstanding challenge is used.",
+      "expect": {
+        "after": {
+          "challenges": [
+            {
+              "challenge": "e0e1e2e3e4e5e6e7e8e9eaebecedeeef",
+              "expiresAtMs": 1030000
+            }
+          ],
+          "devices": [
+            {
+              "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+              "deviceKey": "a58541de08caa28ff5cef7fa71db0b23a233dbd02941215703c52844fff81647",
+              "lastPressTypeAcceptedMs": null
+            }
+          ],
+          "senders": []
+        },
+        "error": "challenge_required",
+        "messageType": null,
+        "response": {
+          "counter": 0,
+          "error": "challenge_required",
+          "sender": "7272727272727272",
+          "type": "error"
+        },
+        "result": "reject",
+        "retry": false,
+        "sealed": true,
+        "transportError": "failed"
+      },
+      "kind": "receive",
+      "message": "0101d0d1d2d3d4d5d6d7d8d9dadbdcdddedf72727272727272720000000000000000c3c3c3c3c3c3c3c3c3c3c3c3c3c3c30f9ce5325ccb881eae6118be4c9de577520b2cf2c2ed99fdb69c7c81b6010dc78b669e51bee5ba836e63b43f51f843e7c652",
+      "name": "reject-unknown-sender-no-challenge",
+      "receiver": "plugin",
+      "state": {
+        "challenges": [
+          {
+            "challenge": "e0e1e2e3e4e5e6e7e8e9eaebecedeeef",
+            "expiresAtMs": 1030000
+          }
+        ],
+        "devices": [
+          {
+            "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+            "deviceKey": "a58541de08caa28ff5cef7fa71db0b23a233dbd02941215703c52844fff81647",
+            "lastPressTypeAcceptedMs": null
+          }
+        ],
+        "nowMs": 1000000,
+        "senders": []
+      }
+    },
+    {
+      "description": "A well-formed challenge that is not outstanding, such as a spent one, is refused.",
+      "expect": {
+        "after": {
+          "challenges": [
+            {
+              "challenge": "e0e1e2e3e4e5e6e7e8e9eaebecedeeef",
+              "expiresAtMs": 1030000
+            }
+          ],
+          "devices": [
+            {
+              "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+              "deviceKey": "a58541de08caa28ff5cef7fa71db0b23a233dbd02941215703c52844fff81647",
+              "lastPressTypeAcceptedMs": null
+            }
+          ],
+          "senders": []
+        },
+        "error": "challenge_invalid",
+        "messageType": null,
+        "response": {
+          "counter": 0,
+          "error": "challenge_invalid",
+          "sender": "7272727272727272",
+          "type": "error"
+        },
+        "result": "reject",
+        "retry": false,
+        "sealed": true,
+        "transportError": "failed"
+      },
+      "kind": "receive",
+      "message": "0101d0d1d2d3d4d5d6d7d8d9dadbdcdddedf72727272727272720000000000000000c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3105f2148eed7307b09178afa6b8854a5b21ecb6c87823f9eedfe97a8130b6ab6efff0d4332beb537a872d4d68023a0fed33123228f011e3a0dc3c8b9d6bf02c46e7fc031f26eefb78bbe38325fe70b6c6645d9b726e0e9ee87e0b8551edb4ece6a",
+      "name": "reject-challenge-spent",
+      "receiver": "plugin",
+      "state": {
+        "challenges": [
+          {
+            "challenge": "e0e1e2e3e4e5e6e7e8e9eaebecedeeef",
+            "expiresAtMs": 1030000
+          }
+        ],
+        "devices": [
+          {
+            "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+            "deviceKey": "a58541de08caa28ff5cef7fa71db0b23a233dbd02941215703c52844fff81647",
+            "lastPressTypeAcceptedMs": null
+          }
+        ],
+        "nowMs": 1000000,
+        "senders": []
+      }
+    },
+    {
+      "description": "A challenge whose expiry equals the current time is expired and is refused, and it stays in the table.",
+      "expect": {
+        "after": {
+          "challenges": [
+            {
+              "challenge": "c0c1c2c3c4c5c6c7c8c9cacbcccdcecf",
+              "expiresAtMs": 1000000
+            },
+            {
+              "challenge": "e0e1e2e3e4e5e6e7e8e9eaebecedeeef",
+              "expiresAtMs": 1030000
+            }
+          ],
+          "devices": [
+            {
+              "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+              "deviceKey": "a58541de08caa28ff5cef7fa71db0b23a233dbd02941215703c52844fff81647",
+              "lastPressTypeAcceptedMs": null
+            }
+          ],
+          "senders": []
+        },
+        "error": "challenge_invalid",
+        "messageType": null,
+        "response": {
+          "counter": 0,
+          "error": "challenge_invalid",
+          "sender": "7272727272727272",
+          "type": "error"
+        },
+        "result": "reject",
+        "retry": false,
+        "sealed": true,
+        "transportError": "failed"
+      },
+      "kind": "receive",
+      "message": "0101d0d1d2d3d4d5d6d7d8d9dadbdcdddedf72727272727272720000000000000000c3c3c3c3c3c3c3c3c3c3c3c3c3c3c311f5787a38fbb8c6576f887608d87c0257077f32ab8df8503bd52e48a5dad857b73d060b1c2fdfe47ec4d40516cfeb586459a524bf3869d7b47b0d350183c3f8ff6c59c5ac24363bb129589c525459bcc09188320b42f203bac913087bf237dac6",
+      "name": "reject-challenge-expired",
+      "receiver": "plugin",
+      "state": {
+        "challenges": [
+          {
+            "challenge": "c0c1c2c3c4c5c6c7c8c9cacbcccdcecf",
+            "expiresAtMs": 1000000
+          },
+          {
+            "challenge": "e0e1e2e3e4e5e6e7e8e9eaebecedeeef",
+            "expiresAtMs": 1030000
+          }
+        ],
+        "devices": [
+          {
+            "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+            "deviceKey": "a58541de08caa28ff5cef7fa71db0b23a233dbd02941215703c52844fff81647",
+            "lastPressTypeAcceptedMs": null
+          }
+        ],
+        "nowMs": 1000000,
+        "senders": []
+      }
+    },
+    {
+      "description": "A counter equal to the highest seen is a replay.",
+      "expect": {
+        "after": {
+          "challenges": [],
+          "devices": [
+            {
+              "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+              "deviceKey": "a58541de08caa28ff5cef7fa71db0b23a233dbd02941215703c52844fff81647",
+              "lastPressTypeAcceptedMs": null
+            }
+          ],
+          "senders": [
+            {
+              "bitmap": "6d3a95c4e1b728f9",
+              "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+              "highest": 1000,
+              "senderId": "7171717171717171"
+            }
+          ]
+        },
+        "error": "replayed",
+        "messageType": null,
+        "response": {
+          "counter": 1000,
+          "error": "replayed",
+          "sender": "7171717171717171",
+          "type": "error"
+        },
+        "result": "reject",
+        "retry": false,
+        "sealed": true,
+        "transportError": null
+      },
+      "kind": "receive",
+      "message": "0101d0d1d2d3d4d5d6d7d8d9dadbdcdddedf717171717171717100000000000003e8c3c3c3c3c3c3c3c3c3c3c3c3c3c3c31299f684de688dd3dc906f64704ab7bd8c00f38c913abc0cbfcd41e1362d04b9608088fbc5ff5f2ba8df45a5922ad2bc3312",
+      "name": "reject-replay-equal-highest",
+      "receiver": "plugin",
+      "state": {
+        "challenges": [],
+        "devices": [
+          {
+            "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+            "deviceKey": "a58541de08caa28ff5cef7fa71db0b23a233dbd02941215703c52844fff81647",
+            "lastPressTypeAcceptedMs": null
+          }
+        ],
+        "nowMs": 1000000,
+        "senders": [
+          {
+            "bitmap": "6d3a95c4e1b728f9",
+            "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+            "highest": 1000,
+            "senderId": "7171717171717171"
+          }
+        ]
+      }
+    },
+    {
+      "description": "A counter inside the window whose bit is already set is a replay.",
+      "expect": {
+        "after": {
+          "challenges": [],
+          "devices": [
+            {
+              "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+              "deviceKey": "a58541de08caa28ff5cef7fa71db0b23a233dbd02941215703c52844fff81647",
+              "lastPressTypeAcceptedMs": null
+            }
+          ],
+          "senders": [
+            {
+              "bitmap": "6d3a95c4e1b728f9",
+              "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+              "highest": 1000,
+              "senderId": "7171717171717171"
+            }
+          ]
+        },
+        "error": "replayed",
+        "messageType": null,
+        "response": {
+          "counter": 997,
+          "error": "replayed",
+          "sender": "7171717171717171",
+          "type": "error"
+        },
+        "result": "reject",
+        "retry": false,
+        "sealed": true,
+        "transportError": null
+      },
+      "kind": "receive",
+      "message": "0101d0d1d2d3d4d5d6d7d8d9dadbdcdddedf717171717171717100000000000003e5c3c3c3c3c3c3c3c3c3c3c3c3c3c3c313b5de1bb98cbf9380b181417a9d563f6422660436542ff8520ef35e4d5ab027891fef9eeae6685e516bec5a065baa07f381",
+      "name": "reject-replay-seen-in-window",
+      "receiver": "plugin",
+      "state": {
+        "challenges": [],
+        "devices": [
+          {
+            "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+            "deviceKey": "a58541de08caa28ff5cef7fa71db0b23a233dbd02941215703c52844fff81647",
+            "lastPressTypeAcceptedMs": null
+          }
+        ],
+        "nowMs": 1000000,
+        "senders": [
+          {
+            "bitmap": "6d3a95c4e1b728f9",
+            "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+            "highest": 1000,
+            "senderId": "7171717171717171"
+          }
+        ]
+      }
+    },
+    {
+      "description": "A counter 64 below the highest has fallen out of the window and is too old.",
+      "expect": {
+        "after": {
+          "challenges": [],
+          "devices": [
+            {
+              "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+              "deviceKey": "a58541de08caa28ff5cef7fa71db0b23a233dbd02941215703c52844fff81647",
+              "lastPressTypeAcceptedMs": null
+            }
+          ],
+          "senders": [
+            {
+              "bitmap": "6d3a95c4e1b728f9",
+              "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+              "highest": 1000,
+              "senderId": "7171717171717171"
+            }
+          ]
+        },
+        "error": "counter_too_old",
+        "messageType": null,
+        "response": {
+          "counter": 936,
+          "error": "counter_too_old",
+          "sender": "7171717171717171",
+          "type": "error"
+        },
+        "result": "reject",
+        "retry": false,
+        "sealed": true,
+        "transportError": "failed"
+      },
+      "kind": "receive",
+      "message": "0101d0d1d2d3d4d5d6d7d8d9dadbdcdddedf717171717171717100000000000003a8c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3144333f6ebdff89757870b23fdb7b36333d47e1e3abc716e0777e4ac4727f05c1ae29146544b3aed958250114ea11039f646",
+      "name": "reject-counter-below-window",
+      "receiver": "plugin",
+      "state": {
+        "challenges": [],
+        "devices": [
+          {
+            "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+            "deviceKey": "a58541de08caa28ff5cef7fa71db0b23a233dbd02941215703c52844fff81647",
+            "lastPressTypeAcceptedMs": null
+          }
+        ],
+        "nowMs": 1000000,
+        "senders": [
+          {
+            "bitmap": "6d3a95c4e1b728f9",
+            "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+            "highest": 1000,
+            "senderId": "7171717171717171"
+          }
+        ]
+      }
+    },
+    {
+      "description": "A type that the protocol does not define is refused with unknown_type.",
+      "expect": {
+        "after": {
+          "challenges": [],
+          "devices": [
+            {
+              "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+              "deviceKey": "a58541de08caa28ff5cef7fa71db0b23a233dbd02941215703c52844fff81647",
+              "lastPressTypeAcceptedMs": null
+            }
+          ],
+          "senders": [
+            {
+              "bitmap": "da752b89c36e51f3",
+              "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+              "highest": 1001,
+              "senderId": "7171717171717171"
+            }
+          ]
+        },
+        "error": "unknown_type",
+        "messageType": null,
+        "response": {
+          "counter": 1001,
+          "error": "unknown_type",
+          "sender": "7171717171717171",
+          "type": "error"
+        },
+        "result": "reject",
+        "retry": false,
+        "sealed": true,
+        "transportError": "unsupported"
+      },
+      "kind": "receive",
+      "message": "0101d0d1d2d3d4d5d6d7d8d9dadbdcdddedf717171717171717100000000000003e9c3c3c3c3c3c3c3c3c3c3c3c3c3c3c31515cb4ef3e4c3fc21357a45f7ae2e6c03b110b034543ecc2221890093465e18e51e",
+      "name": "reject-unknown-type",
+      "receiver": "plugin",
+      "state": {
+        "challenges": [],
+        "devices": [
+          {
+            "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+            "deviceKey": "a58541de08caa28ff5cef7fa71db0b23a233dbd02941215703c52844fff81647",
+            "lastPressTypeAcceptedMs": null
+          }
+        ],
+        "nowMs": 1000000,
+        "senders": [
+          {
+            "bitmap": "6d3a95c4e1b728f9",
+            "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+            "highest": 1000,
+            "senderId": "7171717171717171"
+          }
+        ]
+      }
+    },
+    {
+      "description": "A press without mods is a malformed body.",
+      "expect": {
+        "after": {
+          "challenges": [],
+          "devices": [
+            {
+              "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+              "deviceKey": "a58541de08caa28ff5cef7fa71db0b23a233dbd02941215703c52844fff81647",
+              "lastPressTypeAcceptedMs": 999960
+            }
+          ],
+          "senders": [
+            {
+              "bitmap": "da752b89c36e51f3",
+              "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+              "highest": 1001,
+              "senderId": "7171717171717171"
+            }
+          ]
+        },
+        "error": "bad_body",
+        "messageType": null,
+        "response": {
+          "counter": 1001,
+          "error": "bad_body",
+          "sender": "7171717171717171",
+          "type": "error"
+        },
+        "result": "reject",
+        "retry": false,
+        "sealed": true,
+        "transportError": "failed"
+      },
+      "kind": "receive",
+      "message": "0101d0d1d2d3d4d5d6d7d8d9dadbdcdddedf717171717171717100000000000003e9c3c3c3c3c3c3c3c3c3c3c3c3c3c3c316211e9659e14a576f9d1ee27d564d9e8d8d9d325951da5b9e04a9a2ffc6b094e68fcc8b02c08bc55b",
+      "name": "reject-body-missing-field",
+      "receiver": "plugin",
+      "state": {
+        "challenges": [],
+        "devices": [
+          {
+            "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+            "deviceKey": "a58541de08caa28ff5cef7fa71db0b23a233dbd02941215703c52844fff81647",
+            "lastPressTypeAcceptedMs": 999960
+          }
+        ],
+        "nowMs": 1000000,
+        "senders": [
+          {
+            "bitmap": "6d3a95c4e1b728f9",
+            "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+            "highest": 1000,
+            "senderId": "7171717171717171"
+          }
+        ]
+      }
+    },
+    {
+      "description": "A move with an extra field is a malformed body.",
+      "expect": {
+        "after": {
+          "challenges": [],
+          "devices": [
+            {
+              "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+              "deviceKey": "a58541de08caa28ff5cef7fa71db0b23a233dbd02941215703c52844fff81647",
+              "lastPressTypeAcceptedMs": null
+            }
+          ],
+          "senders": [
+            {
+              "bitmap": "da752b89c36e51f3",
+              "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+              "highest": 1001,
+              "senderId": "7171717171717171"
+            }
+          ]
+        },
+        "error": "bad_body",
+        "messageType": null,
+        "response": {
+          "counter": 1001,
+          "error": "bad_body",
+          "sender": "7171717171717171",
+          "type": "error"
+        },
+        "result": "reject",
+        "retry": false,
+        "sealed": true,
+        "transportError": "failed"
+      },
+      "kind": "receive",
+      "message": "0101d0d1d2d3d4d5d6d7d8d9dadbdcdddedf717171717171717100000000000003e9c3c3c3c3c3c3c3c3c3c3c3c3c3c3c31711af89e31a798f6d5b70decb6e82af5ffae6a7f6519179c57d8c7335f955ce61253d6512903a443de48b8b830ca413e10cb4065b4916c0",
+      "name": "reject-body-extra-field",
+      "receiver": "plugin",
+      "state": {
+        "challenges": [],
+        "devices": [
+          {
+            "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+            "deviceKey": "a58541de08caa28ff5cef7fa71db0b23a233dbd02941215703c52844fff81647",
+            "lastPressTypeAcceptedMs": null
+          }
+        ],
+        "nowMs": 1000000,
+        "senders": [
+          {
+            "bitmap": "6d3a95c4e1b728f9",
+            "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+            "highest": 1000,
+            "senderId": "7171717171717171"
+          }
+        ]
+      }
+    },
+    {
+      "description": "A type message whose text contains a line feed is a malformed body.",
+      "expect": {
+        "after": {
+          "challenges": [],
+          "devices": [
+            {
+              "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+              "deviceKey": "a58541de08caa28ff5cef7fa71db0b23a233dbd02941215703c52844fff81647",
+              "lastPressTypeAcceptedMs": 999960
+            }
+          ],
+          "senders": [
+            {
+              "bitmap": "da752b89c36e51f3",
+              "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+              "highest": 1001,
+              "senderId": "7171717171717171"
+            }
+          ]
+        },
+        "error": "bad_body",
+        "messageType": null,
+        "response": {
+          "counter": 1001,
+          "error": "bad_body",
+          "sender": "7171717171717171",
+          "type": "error"
+        },
+        "result": "reject",
+        "retry": false,
+        "sealed": true,
+        "transportError": "failed"
+      },
+      "kind": "receive",
+      "message": "0101d0d1d2d3d4d5d6d7d8d9dadbdcdddedf717171717171717100000000000003e9c3c3c3c3c3c3c3c3c3c3c3c3c3c3c31892c6156f6de73abfbaa64c2c287c5899ec2c8eb77523139ccbe307fbdcfd69f7fd8ba70cfa3cc5147afaf91be3bcf601b93981769dd251a8b8a3b9",
+      "name": "reject-body-text-newline",
+      "receiver": "plugin",
+      "state": {
+        "challenges": [],
+        "devices": [
+          {
+            "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+            "deviceKey": "a58541de08caa28ff5cef7fa71db0b23a233dbd02941215703c52844fff81647",
+            "lastPressTypeAcceptedMs": 999960
+          }
+        ],
+        "nowMs": 1000000,
+        "senders": [
+          {
+            "bitmap": "6d3a95c4e1b728f9",
+            "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+            "highest": 1000,
+            "senderId": "7171717171717171"
+          }
+        ]
+      }
+    },
+    {
+      "description": "A type message whose submit is a string instead of a boolean is a malformed body.",
+      "expect": {
+        "after": {
+          "challenges": [],
+          "devices": [
+            {
+              "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+              "deviceKey": "a58541de08caa28ff5cef7fa71db0b23a233dbd02941215703c52844fff81647",
+              "lastPressTypeAcceptedMs": 999960
+            }
+          ],
+          "senders": [
+            {
+              "bitmap": "da752b89c36e51f3",
+              "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+              "highest": 1001,
+              "senderId": "7171717171717171"
+            }
+          ]
+        },
+        "error": "bad_body",
+        "messageType": null,
+        "response": {
+          "counter": 1001,
+          "error": "bad_body",
+          "sender": "7171717171717171",
+          "type": "error"
+        },
+        "result": "reject",
+        "retry": false,
+        "sealed": true,
+        "transportError": "failed"
+      },
+      "kind": "receive",
+      "message": "0101d0d1d2d3d4d5d6d7d8d9dadbdcdddedf717171717171717100000000000003e9c3c3c3c3c3c3c3c3c3c3c3c3c3c3c319ce2c08c19d4d9cdf95e9e6fd4eec95a72a80ebfaa642e9a655a1a5388e969d07c5cb12349f8c01971c79f20967dc63b6032142882b7478ccd3a1",
+      "name": "reject-body-type-submit-not-bool",
+      "receiver": "plugin",
+      "state": {
+        "challenges": [],
+        "devices": [
+          {
+            "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+            "deviceKey": "a58541de08caa28ff5cef7fa71db0b23a233dbd02941215703c52844fff81647",
+            "lastPressTypeAcceptedMs": 999960
+          }
+        ],
+        "nowMs": 1000000,
+        "senders": [
+          {
+            "bitmap": "6d3a95c4e1b728f9",
+            "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+            "highest": 1000,
+            "senderId": "7171717171717171"
+          }
+        ]
+      }
+    },
+    {
+      "description": "A move with dx 1001 is outside the allowed range of plus or minus 1000.",
+      "expect": {
+        "after": {
+          "challenges": [],
+          "devices": [
+            {
+              "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+              "deviceKey": "a58541de08caa28ff5cef7fa71db0b23a233dbd02941215703c52844fff81647",
+              "lastPressTypeAcceptedMs": null
+            }
+          ],
+          "senders": [
+            {
+              "bitmap": "da752b89c36e51f3",
+              "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+              "highest": 1001,
+              "senderId": "7171717171717171"
+            }
+          ]
+        },
+        "error": "bad_body",
+        "messageType": null,
+        "response": {
+          "counter": 1001,
+          "error": "bad_body",
+          "sender": "7171717171717171",
+          "type": "error"
+        },
+        "result": "reject",
+        "retry": false,
+        "sealed": true,
+        "transportError": "failed"
+      },
+      "kind": "receive",
+      "message": "0101d0d1d2d3d4d5d6d7d8d9dadbdcdddedf717171717171717100000000000003e9c3c3c3c3c3c3c3c3c3c3c3c3c3c3c31a2662950743be76ffdfcad5387899cd24262ff1105036f7b9e040dfeeafe0d600ff31c5e5d74f174895480c92e4d4eda8",
+      "name": "reject-body-move-range",
+      "receiver": "plugin",
+      "state": {
+        "challenges": [],
+        "devices": [
+          {
+            "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+            "deviceKey": "a58541de08caa28ff5cef7fa71db0b23a233dbd02941215703c52844fff81647",
+            "lastPressTypeAcceptedMs": null
+          }
+        ],
+        "nowMs": 1000000,
+        "senders": [
+          {
+            "bitmap": "6d3a95c4e1b728f9",
+            "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+            "highest": 1000,
+            "senderId": "7171717171717171"
+          }
+        ]
+      }
+    },
+    {
+      "description": "A press with key 3 is below the lowest keyboard usage 4 and is a malformed body.",
+      "expect": {
+        "after": {
+          "challenges": [],
+          "devices": [
+            {
+              "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+              "deviceKey": "a58541de08caa28ff5cef7fa71db0b23a233dbd02941215703c52844fff81647",
+              "lastPressTypeAcceptedMs": 999960
+            }
+          ],
+          "senders": [
+            {
+              "bitmap": "da752b89c36e51f3",
+              "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+              "highest": 1001,
+              "senderId": "7171717171717171"
+            }
+          ]
+        },
+        "error": "bad_body",
+        "messageType": null,
+        "response": {
+          "counter": 1001,
+          "error": "bad_body",
+          "sender": "7171717171717171",
+          "type": "error"
+        },
+        "result": "reject",
+        "retry": false,
+        "sealed": true,
+        "transportError": "failed"
+      },
+      "kind": "receive",
+      "message": "0101d0d1d2d3d4d5d6d7d8d9dadbdcdddedf717171717171717100000000000003e9c3c3c3c3c3c3c3c3c3c3c3c3c3c3c31b69b6243fdd1146bdd11bcbfec148af31eac243d38148bfdcd03918ff887bb3a21c7de91db9592b7171d25ed66e97011977",
+      "name": "reject-body-press-key-range",
+      "receiver": "plugin",
+      "state": {
+        "challenges": [],
+        "devices": [
+          {
+            "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+            "deviceKey": "a58541de08caa28ff5cef7fa71db0b23a233dbd02941215703c52844fff81647",
+            "lastPressTypeAcceptedMs": 999960
+          }
+        ],
+        "nowMs": 1000000,
+        "senders": [
+          {
+            "bitmap": "6d3a95c4e1b728f9",
+            "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+            "highest": 1000,
+            "senderId": "7171717171717171"
+          }
+        ]
+      }
+    },
+    {
+      "description": "A press whose key is a modifier usage (0xE1) is refused as unsupported_key.",
+      "expect": {
+        "after": {
+          "challenges": [],
+          "devices": [
+            {
+              "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+              "deviceKey": "a58541de08caa28ff5cef7fa71db0b23a233dbd02941215703c52844fff81647",
+              "lastPressTypeAcceptedMs": 999960
+            }
+          ],
+          "senders": [
+            {
+              "bitmap": "da752b89c36e51f3",
+              "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+              "highest": 1001,
+              "senderId": "7171717171717171"
+            }
+          ]
+        },
+        "error": "unsupported_key",
+        "messageType": null,
+        "response": {
+          "counter": 1001,
+          "error": "unsupported_key",
+          "sender": "7171717171717171",
+          "type": "error"
+        },
+        "result": "reject",
+        "retry": false,
+        "sealed": true,
+        "transportError": "unsupported"
+      },
+      "kind": "receive",
+      "message": "0101d0d1d2d3d4d5d6d7d8d9dadbdcdddedf717171717171717100000000000003e9c3c3c3c3c3c3c3c3c3c3c3c3c3c3c31c0b01356b12c1eae85dc512d82d92f659fbaea19d4d1b9a683a951679ca9be59f2aaa7dabbe155007300d32862fd8c741bf9835",
+      "name": "reject-unsupported-key",
+      "receiver": "plugin",
+      "state": {
+        "challenges": [],
+        "devices": [
+          {
+            "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+            "deviceKey": "a58541de08caa28ff5cef7fa71db0b23a233dbd02941215703c52844fff81647",
+            "lastPressTypeAcceptedMs": 999960
+          }
+        ],
+        "nowMs": 1000000,
+        "senders": [
+          {
+            "bitmap": "6d3a95c4e1b728f9",
+            "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+            "highest": 1000,
+            "senderId": "7171717171717171"
+          }
+        ]
+      }
+    },
+    {
+      "description": "A type message whose open key is a modifier usage (0xE1) is refused as unsupported_key.",
+      "expect": {
+        "after": {
+          "challenges": [],
+          "devices": [
+            {
+              "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+              "deviceKey": "a58541de08caa28ff5cef7fa71db0b23a233dbd02941215703c52844fff81647",
+              "lastPressTypeAcceptedMs": 999960
+            }
+          ],
+          "senders": [
+            {
+              "bitmap": "da752b89c36e51f3",
+              "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+              "highest": 1001,
+              "senderId": "7171717171717171"
+            }
+          ]
+        },
+        "error": "unsupported_key",
+        "messageType": null,
+        "response": {
+          "counter": 1001,
+          "error": "unsupported_key",
+          "sender": "7171717171717171",
+          "type": "error"
+        },
+        "result": "reject",
+        "retry": false,
+        "sealed": true,
+        "transportError": "unsupported"
+      },
+      "kind": "receive",
+      "message": "0101d0d1d2d3d4d5d6d7d8d9dadbdcdddedf717171717171717100000000000003e9c3c3c3c3c3c3c3c3c3c3c3c3c3c3c31dede35901c35cfef69228b7303d22a84cc1f0b583fff435309ac24adced16324fa03f194ddfd62ee9642e9f99a3b0e135b98cc036cb7d373f700ffb18c9dd5e35aa540f2df1e40c20fd1a",
+      "name": "reject-unsupported-key-in-open",
+      "receiver": "plugin",
+      "state": {
+        "challenges": [],
+        "devices": [
+          {
+            "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+            "deviceKey": "a58541de08caa28ff5cef7fa71db0b23a233dbd02941215703c52844fff81647",
+            "lastPressTypeAcceptedMs": 999960
+          }
+        ],
+        "nowMs": 1000000,
+        "senders": [
+          {
+            "bitmap": "6d3a95c4e1b728f9",
+            "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+            "highest": 1000,
+            "senderId": "7171717171717171"
+          }
+        ]
+      }
+    },
+    {
+      "description": "A press 40 ms after the last accepted press or type is refused with retryAfterMs 60, and the counter is still spent.",
+      "expect": {
+        "after": {
+          "challenges": [],
+          "devices": [
+            {
+              "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+              "deviceKey": "a58541de08caa28ff5cef7fa71db0b23a233dbd02941215703c52844fff81647",
+              "lastPressTypeAcceptedMs": 999960
+            }
+          ],
+          "senders": [
+            {
+              "bitmap": "da752b89c36e51f3",
+              "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+              "highest": 1001,
+              "senderId": "7171717171717171"
+            }
+          ]
+        },
+        "error": "rate_limited",
+        "messageType": null,
+        "response": {
+          "counter": 1001,
+          "error": "rate_limited",
+          "retryAfterMs": 60,
+          "sender": "7171717171717171",
+          "type": "error"
+        },
+        "result": "reject",
+        "retry": false,
+        "sealed": true,
+        "transportError": "rateLimited"
+      },
+      "kind": "receive",
+      "message": "0101d0d1d2d3d4d5d6d7d8d9dadbdcdddedf717171717171717100000000000003e9c3c3c3c3c3c3c3c3c3c3c3c3c3c3c31e3c3df3037364ae3deb447e79b7e552c66c5c9bdc7f3651f798412a1a5f0b4c49c725ef690ff4362798dfac7803b424ad6b",
+      "name": "reject-rate-limited",
+      "receiver": "plugin",
+      "state": {
+        "challenges": [],
+        "devices": [
+          {
+            "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+            "deviceKey": "a58541de08caa28ff5cef7fa71db0b23a233dbd02941215703c52844fff81647",
+            "lastPressTypeAcceptedMs": 999960
+          }
+        ],
+        "nowMs": 1000000,
+        "senders": [
+          {
+            "bitmap": "6d3a95c4e1b728f9",
+            "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+            "highest": 1000,
+            "senderId": "7171717171717171"
+          }
+        ]
+      }
+    },
+    {
+      "description": "A sealed ok that names the outstanding request is delivered and the request is cleared.",
+      "expect": {
+        "after": {
+          "outstanding": []
+        },
+        "reason": null,
+        "response": {
+          "counter": 5,
+          "sender": "7373737373737373",
+          "type": "ok"
+        },
+        "result": "accept"
+      },
+      "kind": "receive",
+      "message": "0102d0d1d2d3d4d5d6d7d8d9dadbdcdddedf7e7e7e7e7e7e7e7e0000000000000000c3c3c3c3c3c3c3c3c3c3c3c3c3c3c31fb6f516a12c90377dcca5008ca194faa490eb0d232331c5e6adef664567084e2afe757a2ab5052a2417126d5541e377c31fcad0e5f1fb0aaec073033a268bd687a2a10f9a4f",
+      "name": "phone-accept-ok",
+      "receiver": "phone",
+      "state": {
+        "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+        "deviceKey": "a58541de08caa28ff5cef7fa71db0b23a233dbd02941215703c52844fff81647",
+        "outstanding": [
+          {
+            "counter": 5,
+            "sender": "7373737373737373"
+          }
+        ]
+      }
+    },
+    {
+      "description": "A sealed ok that names a counter the phone is not waiting for is dropped and changes nothing.",
+      "expect": {
+        "after": {
+          "outstanding": [
+            {
+              "counter": 5,
+              "sender": "7373737373737373"
+            }
+          ]
+        },
+        "reason": "not_outstanding",
+        "response": null,
+        "result": "drop"
+      },
+      "kind": "receive",
+      "message": "0102d0d1d2d3d4d5d6d7d8d9dadbdcdddedf7e7e7e7e7e7e7e7e0000000000000001c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3202c6affba6c1b1fdac65451c94040f0a33005ade5708aa5aaea15454f5d5a307bdc05f922ad801eeab7c896015fd0b99878c956057e61ca4955a0d1752475b6dd0fce6ca03d",
+      "name": "phone-drop-not-outstanding",
+      "receiver": "phone",
+      "state": {
+        "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+        "deviceKey": "a58541de08caa28ff5cef7fa71db0b23a233dbd02941215703c52844fff81647",
+        "outstanding": [
+          {
+            "counter": 5,
+            "sender": "7373737373737373"
+          }
+        ]
+      }
+    },
+    {
+      "description": "A correctly sealed ok with the phone-to-plugin direction byte is dropped at the direction check.",
+      "expect": {
+        "after": {
+          "outstanding": [
+            {
+              "counter": 5,
+              "sender": "7373737373737373"
+            }
+          ]
+        },
+        "reason": "direction",
+        "response": null,
+        "result": "drop"
+      },
+      "kind": "receive",
+      "message": "0101d0d1d2d3d4d5d6d7d8d9dadbdcdddedf7e7e7e7e7e7e7e7e0000000000000002c3c3c3c3c3c3c3c3c3c3c3c3c3c3c321e0814b0dcc4f606e7f51f70930111bd46541e564436643409248223cb007318d948d9d9b99803c51c33d154d4a6fad08a8fa4d9c87f69fb1a4a2196e873323e943ad95283f",
+      "name": "phone-drop-wrong-direction",
+      "receiver": "phone",
+      "state": {
+        "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+        "deviceKey": "a58541de08caa28ff5cef7fa71db0b23a233dbd02941215703c52844fff81647",
+        "outstanding": [
+          {
+            "counter": 5,
+            "sender": "7373737373737373"
+          }
+        ]
+      }
+    }
+  ],
+  "file": "receive.json",
+  "formatVersion": 1
+}

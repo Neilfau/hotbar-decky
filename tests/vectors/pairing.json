@@ -1,0 +1,90 @@
+{
+  "cases": [
+    {
+      "derived": {
+        "confirmPhone": "57345a7dd7701ab6251d96ab32686f682cf4dd1670d0bc2c8d3ce276f8e8c694",
+        "confirmPlugin": "074b0e7af075678ca71f55a2612c46c2bb1e5c258480ea2a747b0bbcfa76843d",
+        "deviceKey": "a58541de08caa28ff5cef7fa71db0b23a233dbd02941215703c52844fff81647",
+        "fingerprint": "f35e5616160a30bf3c6e79fa73c576d4",
+        "phonePublic": "8520f0098930a754748b7ddcb43ef75a0dbf3a0d26381af4eba4a98eaa9b4e6a",
+        "pluginPublic": "de9edb7d7b7dc1b4d35b61c2ece435373f8343c85b78674dadfc7e146f882b4f",
+        "prk": "3223879177d448b25219f3c3a32f82f2083a2d8944a32fabc776699c7ff906ed",
+        "qrUri": "hotbar://pair?v=1&host=192.168.1.50&port=48321&token=101112131415161718191a1b1c1d1e1f&secret=404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f&fp=f35e5616160a30bf3c6e79fa73c576d4&pid=b0b1b2b3b4b5b6b7b8b9babbbcbdbebf&name=Steam%20Deck%20%C3%A9-1.lan_~",
+        "salt": "404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f202122232425262728292a2b2c2d2e2f303132333435363738393a3b3c3d3e3f",
+        "sharedSecret": "4a5d9d5ba4ce2de1728e3bf480350f25e07e21c947d19e3376f09b3c1e161742",
+        "suffix": "8520f0098930a754748b7ddcb43ef75a0dbf3a0d26381af4eba4a98eaa9b4e6ade9edb7d7b7dc1b4d35b61c2ece435373f8343c85b78674dadfc7e146f882b4fd0d1d2d3d4d5d6d7d8d9dadbdcdddedf"
+      },
+      "description": "Pairing from the QR URI to the device key and both confirmation values, using the RFC 7748 section 6.1 keys.",
+      "inputs": {
+        "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+        "host": "192.168.1.50",
+        "hostname": "Steam Deck é-1.lan_~",
+        "phoneName": "Test iPhone 📱",
+        "phoneNonce": "202122232425262728292a2b2c2d2e2f",
+        "phonePrivate": "77076d0a7318a57d3c16c17251b26645df4c2f87ebc0992ab177fba51db92c2a",
+        "pluginId": "b0b1b2b3b4b5b6b7b8b9babbbcbdbebf",
+        "pluginNonce": "303132333435363738393a3b3c3d3e3f",
+        "pluginPrivate": "5dab087e624a8a4b79e17f8b83800ee66f3bb1292618b6fd1c2f8b27ff88e0eb",
+        "port": 48321,
+        "secret": "404142434445464748494a4b4c4d4e4f505152535455565758595a5b5c5d5e5f",
+        "token": "101112131415161718191a1b1c1d1e1f"
+      },
+      "kind": "pairing",
+      "messages": {
+        "confirmRequest": {
+          "confirm": "57345a7dd7701ab6251d96ab32686f682cf4dd1670d0bc2c8d3ce276f8e8c694",
+          "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf"
+        },
+        "confirmResponse": {
+          "confirm": "074b0e7af075678ca71f55a2612c46c2bb1e5c258480ea2a747b0bbcfa76843d"
+        },
+        "pairRequest": {
+          "name": "Test iPhone 📱",
+          "phoneNonce": "202122232425262728292a2b2c2d2e2f",
+          "phonePublic": "8520f0098930a754748b7ddcb43ef75a0dbf3a0d26381af4eba4a98eaa9b4e6a",
+          "token": "101112131415161718191a1b1c1d1e1f"
+        },
+        "pairResponse": {
+          "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+          "pluginNonce": "303132333435363738393a3b3c3d3e3f",
+          "pluginPublic": "de9edb7d7b7dc1b4d35b61c2ece435373f8343c85b78674dadfc7e146f882b4f"
+        }
+      },
+      "name": "pair-rfc7748-alice-bob"
+    },
+    {
+      "check": "low-order",
+      "derived": {
+        "sharedSecret": "0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "description": "An all-zero (low-order) peer public key gives an all-zero shared secret, which both sides must reject.",
+      "expect": {
+        "reject": true
+      },
+      "inputs": {
+        "ownPrivate": "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20",
+        "peerPublic": "0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "kind": "pairing-reject",
+      "name": "pair-reject-low-order-point"
+    },
+    {
+      "check": "fingerprint",
+      "derived": {
+        "fingerprint": "f35e5616160a30bf3c6e79fa73c576d4"
+      },
+      "description": "A plugin public key whose fingerprint differs from the QR fingerprint in its first byte must be rejected before any key is derived.",
+      "expect": {
+        "reject": true
+      },
+      "inputs": {
+        "pluginPublic": "de9edb7d7b7dc1b4d35b61c2ece435373f8343c85b78674dadfc7e146f882b4f",
+        "qrFingerprint": "0c5e5616160a30bf3c6e79fa73c576d4"
+      },
+      "kind": "pairing-reject",
+      "name": "pair-reject-fingerprint-mismatch"
+    }
+  ],
+  "file": "pairing.json",
+  "formatVersion": 1
+}

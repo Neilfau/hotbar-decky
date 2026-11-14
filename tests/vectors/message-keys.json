@@ -1,0 +1,36 @@
+{
+  "cases": [
+    {
+      "description": "The pairing device key and salt A give one per-message key and nonce.",
+      "deviceKey": "a58541de08caa28ff5cef7fa71db0b23a233dbd02941215703c52844fff81647",
+      "key": "315f570084ce830664f6a86ad86a364dcadb25188fb55477c9fc4160cb4dcda0",
+      "kind": "message-key",
+      "name": "msgkey-1",
+      "nonce": "f96f15534b11d3dbe753417d",
+      "okm": "315f570084ce830664f6a86ad86a364dcadb25188fb55477c9fc4160cb4dcda0f96f15534b11d3dbe753417d",
+      "salt": "000102030405060708090a0b0c0d0e0f"
+    },
+    {
+      "description": "The same device key with salt B gives a different key and nonce.",
+      "deviceKey": "a58541de08caa28ff5cef7fa71db0b23a233dbd02941215703c52844fff81647",
+      "key": "6acaad946b24cc38cb19616fd94d7a45f482e79b67ea5afb6a8d44f6a2084fd7",
+      "kind": "message-key",
+      "name": "msgkey-2",
+      "nonce": "670caabd6e1019b8e44bb35b",
+      "okm": "6acaad946b24cc38cb19616fd94d7a45f482e79b67ea5afb6a8d44f6a2084fd7670caabd6e1019b8e44bb35b",
+      "salt": "f0f1f2f3f4f5f6f7f8f9fafbfcfdfeff"
+    },
+    {
+      "description": "A different device key with salt A gives a different key and nonce.",
+      "deviceKey": "a0a1a2a3a4a5a6a7a8a9aaabacadaeafb0b1b2b3b4b5b6b7b8b9babbbcbdbebf",
+      "key": "6a64682fa4e3482b1077e67a1f967659df119049df2b5217bb6f004b1f7473ec",
+      "kind": "message-key",
+      "name": "msgkey-3",
+      "nonce": "16698f51a267cb9011ac1fc2",
+      "okm": "6a64682fa4e3482b1077e67a1f967659df119049df2b5217bb6f004b1f7473ec16698f51a267cb9011ac1fc2",
+      "salt": "000102030405060708090a0b0c0d0e0f"
+    }
+  ],
+  "file": "message-keys.json",
+  "formatVersion": 1
+}
