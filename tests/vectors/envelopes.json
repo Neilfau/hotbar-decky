@@ -1,0 +1,279 @@
+{
+  "cases": [
+    {
+      "body": "{\"challenge\":\"c0c1c2c3c4c5c6c7c8c9cacbcccdcecf\",\"type\":\"hello\"}",
+      "ciphertext": "73617169c46b4957742b9deeda9e4d624cfa47e96f260f0617a249b43a0a3a0655d57e6e96f1feaf9a73b6135b8636ea0aa7c6d78c177c2e81f8c1abe12813",
+      "description": "A hello that registers a new sender carries a challenge and counter 0.",
+      "deviceKey": "a58541de08caa28ff5cef7fa71db0b23a233dbd02941215703c52844fff81647",
+      "header": {
+        "counter": 0,
+        "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+        "direction": 1,
+        "salt": "5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a01",
+        "senderId": "7171717171717171",
+        "version": 1
+      },
+      "headerBytes": "0101d0d1d2d3d4d5d6d7d8d9dadbdcdddedf717171717171717100000000000000005a5a5a5a5a5a5a5a5a5a5a5a5a5a5a01",
+      "kind": "envelope",
+      "messageKey": "d205cba6058ccdd703289db3b982aafc7f7f2695680ad476083c61136586da7c",
+      "messageNonce": "078e1dbd7865bd7ccb82cf67",
+      "name": "env-hello-registering",
+      "tag": "903060f0d5ba208989e211ea144fa9f1",
+      "wire": "0101d0d1d2d3d4d5d6d7d8d9dadbdcdddedf717171717171717100000000000000005a5a5a5a5a5a5a5a5a5a5a5a5a5a5a0173617169c46b4957742b9deeda9e4d624cfa47e96f260f0617a249b43a0a3a0655d57e6e96f1feaf9a73b6135b8636ea0aa7c6d78c177c2e81f8c1abe12813903060f0d5ba208989e211ea144fa9f1"
+    },
+    {
+      "body": "{\"key\":4,\"mods\":2,\"type\":\"press\"}",
+      "ciphertext": "28d2f52074bc451f67b4de1f1bdafe679b59c259ed7b19c980d0fd8e12dd8cf25e",
+      "description": "A press with a counter above 2^32 exercises the full 8-byte counter field.",
+      "deviceKey": "a58541de08caa28ff5cef7fa71db0b23a233dbd02941215703c52844fff81647",
+      "header": {
+        "counter": 4328719365,
+        "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+        "direction": 1,
+        "salt": "5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a02",
+        "senderId": "7272727272727272",
+        "version": 1
+      },
+      "headerBytes": "0101d0d1d2d3d4d5d6d7d8d9dadbdcdddedf727272727272727200000001020304055a5a5a5a5a5a5a5a5a5a5a5a5a5a5a02",
+      "kind": "envelope",
+      "messageKey": "bd8246a070b802bbd815177d8e6b0aacab5d014b3f3e66c121e9cbedc5429ad9",
+      "messageNonce": "de442bd4f270199a9e39b062",
+      "name": "env-press",
+      "tag": "3c12825f824656214d8dd7829e5f9cf3",
+      "wire": "0101d0d1d2d3d4d5d6d7d8d9dadbdcdddedf727272727272727200000001020304055a5a5a5a5a5a5a5a5a5a5a5a5a5a5a0228d2f52074bc451f67b4de1f1bdafe679b59c259ed7b19c980d0fd8e12dd8cf25e3c12825f824656214d8dd7829e5f9cf3"
+    },
+    {
+      "body": "{\"challenge\":\"c0c1c2c3c4c5c6c7c8c9cacbcccdcecf\",\"key\":40,\"mods\":0,\"type\":\"press\"}",
+      "ciphertext": "1881b18918e07015c43eea71450aedbec607a961e9bc7dfa328e199cd2c07b87ef03eeb6bde070c40fe7f89bd25918817c8bec3c04abb425e25aa03dd3869c20ff44cb77250ccf46ac518d151bc03852bc",
+      "description": "A press that registers its sender over HTTP carries a challenge and counter 0.",
+      "deviceKey": "a58541de08caa28ff5cef7fa71db0b23a233dbd02941215703c52844fff81647",
+      "header": {
+        "counter": 0,
+        "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+        "direction": 1,
+        "salt": "5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a03",
+        "senderId": "7373737373737373",
+        "version": 1
+      },
+      "headerBytes": "0101d0d1d2d3d4d5d6d7d8d9dadbdcdddedf737373737373737300000000000000005a5a5a5a5a5a5a5a5a5a5a5a5a5a5a03",
+      "kind": "envelope",
+      "messageKey": "7dd748075e13af09917b53ec9505dfdef9450fd77189e721871bc3b1987fcd34",
+      "messageNonce": "a034d82ee5803ecb77ec54e4",
+      "name": "env-press-registering-http",
+      "tag": "b8e313369a47c6f164cef4cb7592147c",
+      "wire": "0101d0d1d2d3d4d5d6d7d8d9dadbdcdddedf737373737373737300000000000000005a5a5a5a5a5a5a5a5a5a5a5a5a5a5a031881b18918e07015c43eea71450aedbec607a961e9bc7dfa328e199cd2c07b87ef03eeb6bde070c40fe7f89bd25918817c8bec3c04abb425e25aa03dd3869c20ff44cb77250ccf46ac518d151bc03852bcb8e313369a47c6f164cef4cb7592147c"
+    },
+    {
+      "body": "{\"text\":\"héllo wörld ✓ 日本語\",\"type\":\"type\"}",
+      "ciphertext": "223d23cf037a14b09342bfe4c2c8920344d4353d0ba90b87fc310bbe9251e06613aaf47a6a454a0f4aeec46916026686663badbc",
+      "description": "A plain type message with non-ASCII text has no open key and no submit.",
+      "deviceKey": "a58541de08caa28ff5cef7fa71db0b23a233dbd02941215703c52844fff81647",
+      "header": {
+        "counter": 5,
+        "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+        "direction": 1,
+        "salt": "5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a04",
+        "senderId": "7474747474747474",
+        "version": 1
+      },
+      "headerBytes": "0101d0d1d2d3d4d5d6d7d8d9dadbdcdddedf747474747474747400000000000000055a5a5a5a5a5a5a5a5a5a5a5a5a5a5a04",
+      "kind": "envelope",
+      "messageKey": "f12be90e691dbbf546b9e594d015a552f3ac9673038dd0d7ced2b41729d0b1e6",
+      "messageNonce": "658916a7a5add0a3f056c663",
+      "name": "env-type-text",
+      "tag": "0e6e0f2a793f9e28ee70b6500f350032",
+      "wire": "0101d0d1d2d3d4d5d6d7d8d9dadbdcdddedf747474747474747400000000000000055a5a5a5a5a5a5a5a5a5a5a5a5a5a5a04223d23cf037a14b09342bfe4c2c8920344d4353d0ba90b87fc310bbe9251e06613aaf47a6a454a0f4aeec46916026686663badbc0e6e0f2a793f9e28ee70b6500f350032"
+    },
+    {
+      "body": "{\"open\":{\"key\":40,\"mods\":0},\"submit\":true,\"text\":\"gg wp, thanks all!\",\"type\":\"type\"}",
+      "ciphertext": "f3241e6622529925275ee6c231c00f78f13354b0fe4b4e7ea9287e9400c9f86895e8020615c6fa124256de66062c876e9693e9053a2ffa0be400999241aef84dfafc4dda5eda2b2bbd2bbed49e46c7a4268b2d19",
+      "description": "A chat line carries an open key (Enter) and submit, which are two separate fields.",
+      "deviceKey": "a58541de08caa28ff5cef7fa71db0b23a233dbd02941215703c52844fff81647",
+      "header": {
+        "counter": 6,
+        "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+        "direction": 1,
+        "salt": "5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a05",
+        "senderId": "7575757575757575",
+        "version": 1
+      },
+      "headerBytes": "0101d0d1d2d3d4d5d6d7d8d9dadbdcdddedf757575757575757500000000000000065a5a5a5a5a5a5a5a5a5a5a5a5a5a5a05",
+      "kind": "envelope",
+      "messageKey": "8b11486206638f45964a861379212789b42089a578ee4d6c96574e66caf8591a",
+      "messageNonce": "7f36393e5fab556de50db755",
+      "name": "env-type-chat",
+      "tag": "50fd6463c44d0ef47d33cd66820e916d",
+      "wire": "0101d0d1d2d3d4d5d6d7d8d9dadbdcdddedf757575757575757500000000000000065a5a5a5a5a5a5a5a5a5a5a5a5a5a5a05f3241e6622529925275ee6c231c00f78f13354b0fe4b4e7ea9287e9400c9f86895e8020615c6fa124256de66062c876e9693e9053a2ffa0be400999241aef84dfafc4dda5eda2b2bbd2bbed49e46c7a4268b2d1950fd6463c44d0ef47d33cd66820e916d"
+    },
+    {
+      "body": "{\"dx\":-12,\"dy\":34,\"type\":\"move\"}",
+      "ciphertext": "01212da9ee26dac4dac7a9b5170655645cbfcd1d395079054a02ba5d980baa83",
+      "description": "A pointer move with one negative delta.",
+      "deviceKey": "a58541de08caa28ff5cef7fa71db0b23a233dbd02941215703c52844fff81647",
+      "header": {
+        "counter": 7,
+        "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+        "direction": 1,
+        "salt": "5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a06",
+        "senderId": "7676767676767676",
+        "version": 1
+      },
+      "headerBytes": "0101d0d1d2d3d4d5d6d7d8d9dadbdcdddedf767676767676767600000000000000075a5a5a5a5a5a5a5a5a5a5a5a5a5a5a06",
+      "kind": "envelope",
+      "messageKey": "34573526c3ead270e678917de943425790519a513103865f282271bb132963e6",
+      "messageNonce": "583726031789164cf10649a6",
+      "name": "env-move",
+      "tag": "766465e2163841fc2f1c54ff9ee4f59b",
+      "wire": "0101d0d1d2d3d4d5d6d7d8d9dadbdcdddedf767676767676767600000000000000075a5a5a5a5a5a5a5a5a5a5a5a5a5a5a0601212da9ee26dac4dac7a9b5170655645cbfcd1d395079054a02ba5d980baa83766465e2163841fc2f1c54ff9ee4f59b"
+    },
+    {
+      "body": "{\"button\":\"left\",\"state\":\"down\",\"type\":\"button\"}",
+      "ciphertext": "b38f8cbee3d2e861e6a78cc4dee14dcc42d6cad5dbfa4aa96949dc8de81cf419b0cd350a3dbfe679a1a56d964813db99",
+      "description": "A left pointer button press edge.",
+      "deviceKey": "a58541de08caa28ff5cef7fa71db0b23a233dbd02941215703c52844fff81647",
+      "header": {
+        "counter": 8,
+        "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+        "direction": 1,
+        "salt": "5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a07",
+        "senderId": "7777777777777777",
+        "version": 1
+      },
+      "headerBytes": "0101d0d1d2d3d4d5d6d7d8d9dadbdcdddedf777777777777777700000000000000085a5a5a5a5a5a5a5a5a5a5a5a5a5a5a07",
+      "kind": "envelope",
+      "messageKey": "c84b4a3c2f2edce569040f419f4a65da3a050c168c41e78c8be50fcce55a7446",
+      "messageNonce": "371c78b710c5b2500fce9575",
+      "name": "env-button-left-down",
+      "tag": "ef64888c69554b07fa18f5c9a590811c",
+      "wire": "0101d0d1d2d3d4d5d6d7d8d9dadbdcdddedf777777777777777700000000000000085a5a5a5a5a5a5a5a5a5a5a5a5a5a5a07b38f8cbee3d2e861e6a78cc4dee14dcc42d6cad5dbfa4aa96949dc8de81cf419b0cd350a3dbfe679a1a56d964813db99ef64888c69554b07fa18f5c9a590811c"
+    },
+    {
+      "body": "{\"button\":\"right\",\"state\":\"up\",\"type\":\"button\"}",
+      "ciphertext": "814a4387cf6c76e36026cac69a9626bef9d159c1228d818c3b236cc16c47bacdea97210db63b4c3992c722a12ede7b",
+      "description": "A right pointer button release edge.",
+      "deviceKey": "a58541de08caa28ff5cef7fa71db0b23a233dbd02941215703c52844fff81647",
+      "header": {
+        "counter": 9,
+        "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+        "direction": 1,
+        "salt": "5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a08",
+        "senderId": "7878787878787878",
+        "version": 1
+      },
+      "headerBytes": "0101d0d1d2d3d4d5d6d7d8d9dadbdcdddedf787878787878787800000000000000095a5a5a5a5a5a5a5a5a5a5a5a5a5a5a08",
+      "kind": "envelope",
+      "messageKey": "104937fc182728fa93be7621b1c67dc361b2cfc97a6554e37d1962aac72550f5",
+      "messageNonce": "9e23680b3dcab0aafcea478f",
+      "name": "env-button-right-up",
+      "tag": "69c20d664c56415f0ea3d2312b64dbab",
+      "wire": "0101d0d1d2d3d4d5d6d7d8d9dadbdcdddedf787878787878787800000000000000095a5a5a5a5a5a5a5a5a5a5a5a5a5a5a08814a4387cf6c76e36026cac69a9626bef9d159c1228d818c3b236cc16c47bacdea97210db63b4c3992c722a12ede7b69c20d664c56415f0ea3d2312b64dbab"
+    },
+    {
+      "body": "{\"dx\":0,\"dy\":-240,\"type\":\"scroll\"}",
+      "ciphertext": "6f3c82922fea1c1fbc5e418b7e5433ffb7d0738b92f96633d3bf456df68eb901efa1",
+      "description": "A scroll message with a negative vertical delta in 1/120 notch units.",
+      "deviceKey": "a58541de08caa28ff5cef7fa71db0b23a233dbd02941215703c52844fff81647",
+      "header": {
+        "counter": 10,
+        "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+        "direction": 1,
+        "salt": "5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a09",
+        "senderId": "7979797979797979",
+        "version": 1
+      },
+      "headerBytes": "0101d0d1d2d3d4d5d6d7d8d9dadbdcdddedf7979797979797979000000000000000a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a09",
+      "kind": "envelope",
+      "messageKey": "6c8c99a3dd54929001b713470d9d99d9ae6eea83c5c0e355be1adf664e9fda3b",
+      "messageNonce": "3fedac82e467d9620ee7c2e7",
+      "name": "env-scroll",
+      "tag": "14fd979b10a6b9539d922cd9bd769247",
+      "wire": "0101d0d1d2d3d4d5d6d7d8d9dadbdcdddedf7979797979797979000000000000000a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a096f3c82922fea1c1fbc5e418b7e5433ffb7d0738b92f96633d3bf456df68eb901efa114fd979b10a6b9539d922cd9bd769247"
+    },
+    {
+      "body": "{\"type\":\"unpair\"}",
+      "ciphertext": "fac6bce95ac4bb1421984d82d59994cba1",
+      "description": "An unpair message has no fields besides its type.",
+      "deviceKey": "a58541de08caa28ff5cef7fa71db0b23a233dbd02941215703c52844fff81647",
+      "header": {
+        "counter": 11,
+        "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+        "direction": 1,
+        "salt": "5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a0a",
+        "senderId": "7a7a7a7a7a7a7a7a",
+        "version": 1
+      },
+      "headerBytes": "0101d0d1d2d3d4d5d6d7d8d9dadbdcdddedf7a7a7a7a7a7a7a7a000000000000000b5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a0a",
+      "kind": "envelope",
+      "messageKey": "c21bbdc909a5d4566bfef1259d376aaa9bd817b090c8a069f413405b62ae0e89",
+      "messageNonce": "1ab9ac138d870bf6276a7312",
+      "name": "env-unpair",
+      "tag": "9a9594c4cea09e9d162947574502ffdf",
+      "wire": "0101d0d1d2d3d4d5d6d7d8d9dadbdcdddedf7a7a7a7a7a7a7a7a000000000000000b5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a0afac6bce95ac4bb1421984d82d59994cba19a9594c4cea09e9d162947574502ffdf"
+    },
+    {
+      "body": "{\"counter\":3,\"sender\":\"7272727272727272\",\"type\":\"ok\"}",
+      "ciphertext": "d275036b30fab37801292b935854a0cff4a51a1ac604ee2b41f25c8dc30d02f87747b542498ab56a734e75e6a41d1a455ee3820180",
+      "description": "An ok response echoes the sender id and counter of the request it answers.",
+      "deviceKey": "a58541de08caa28ff5cef7fa71db0b23a233dbd02941215703c52844fff81647",
+      "header": {
+        "counter": 0,
+        "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+        "direction": 2,
+        "salt": "5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a0b",
+        "senderId": "7b7b7b7b7b7b7b7b",
+        "version": 1
+      },
+      "headerBytes": "0102d0d1d2d3d4d5d6d7d8d9dadbdcdddedf7b7b7b7b7b7b7b7b00000000000000005a5a5a5a5a5a5a5a5a5a5a5a5a5a5a0b",
+      "kind": "envelope",
+      "messageKey": "28d2b71d02d07a228584e8113c01a07a1568c825738c83a957ae5aaffce8fe2c",
+      "messageNonce": "085305833ccdbe021b8b4a8b",
+      "name": "env-ok",
+      "tag": "1707b5f978d48ba86da1975884d53e71",
+      "wire": "0102d0d1d2d3d4d5d6d7d8d9dadbdcdddedf7b7b7b7b7b7b7b7b00000000000000005a5a5a5a5a5a5a5a5a5a5a5a5a5a5a0bd275036b30fab37801292b935854a0cff4a51a1ac604ee2b41f25c8dc30d02f87747b542498ab56a734e75e6a41d1a455ee38201801707b5f978d48ba86da1975884d53e71"
+    },
+    {
+      "body": "{\"counter\":0,\"hostname\":\"Steam Deck é-1.lan_~\",\"maxVersion\":1,\"pluginId\":\"b0b1b2b3b4b5b6b7b8b9babbbcbdbebf\",\"sender\":\"7171717171717171\",\"type\":\"welcome\"}",
+      "ciphertext": "4e6d8fd3dac42bce20ced915ce76b1b6952e10705bbbaae2a46680ebc1375d142af35577e5ec6da3b570a69c67cbcc272c7d594f6966614aebc4244677257326f13e86b76b81ac8cb67ffd509b6b4dda3c86a6631d039c8f6013892b1f4c6319e1b62b69ef72ad42bd96f87f4b49b9d7d1f7b10bfa15878f0c5f77e8cc5b10fbb77f20436a8ed5fc064036adadde3f8d2fbd9cca3bdbba490a2d",
+      "description": "A welcome response carries the plugin id, the highest protocol version and the hostname.",
+      "deviceKey": "a58541de08caa28ff5cef7fa71db0b23a233dbd02941215703c52844fff81647",
+      "header": {
+        "counter": 0,
+        "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+        "direction": 2,
+        "salt": "5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a0c",
+        "senderId": "7c7c7c7c7c7c7c7c",
+        "version": 1
+      },
+      "headerBytes": "0102d0d1d2d3d4d5d6d7d8d9dadbdcdddedf7c7c7c7c7c7c7c7c00000000000000005a5a5a5a5a5a5a5a5a5a5a5a5a5a5a0c",
+      "kind": "envelope",
+      "messageKey": "e75167372106331132a1a27d13c59f6f522f88c8dcf3d1250a4a3ae69a93a90d",
+      "messageNonce": "cd0eb4e9409446f2ce151dc9",
+      "name": "env-welcome",
+      "tag": "787d99075e35d000ada1a786118868ae",
+      "wire": "0102d0d1d2d3d4d5d6d7d8d9dadbdcdddedf7c7c7c7c7c7c7c7c00000000000000005a5a5a5a5a5a5a5a5a5a5a5a5a5a5a0c4e6d8fd3dac42bce20ced915ce76b1b6952e10705bbbaae2a46680ebc1375d142af35577e5ec6da3b570a69c67cbcc272c7d594f6966614aebc4244677257326f13e86b76b81ac8cb67ffd509b6b4dda3c86a6631d039c8f6013892b1f4c6319e1b62b69ef72ad42bd96f87f4b49b9d7d1f7b10bfa15878f0c5f77e8cc5b10fbb77f20436a8ed5fc064036adadde3f8d2fbd9cca3bdbba490a2d787d99075e35d000ada1a786118868ae"
+    },
+    {
+      "body": "{\"counter\":9,\"error\":\"rate_limited\",\"retryAfterMs\":60,\"sender\":\"7373737373737373\",\"type\":\"error\"}",
+      "ciphertext": "78aeef54591bae890d453cfa8b5bf6b180d469defaf1ae78589c8c62208051e7f786db0fff3cdb1a96449cb6fc27ec8af34c4718cab43501a7baa2b83f97ec19ae94ff2adcb5450349f018eb7e49cbcbf53228e72e2c37577d92e296309fb35c75",
+      "description": "A sealed rate_limited error carries retryAfterMs and echoes the request's sender id and counter.",
+      "deviceKey": "a58541de08caa28ff5cef7fa71db0b23a233dbd02941215703c52844fff81647",
+      "header": {
+        "counter": 1,
+        "deviceId": "d0d1d2d3d4d5d6d7d8d9dadbdcdddedf",
+        "direction": 2,
+        "salt": "5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a0d",
+        "senderId": "7d7d7d7d7d7d7d7d",
+        "version": 1
+      },
+      "headerBytes": "0102d0d1d2d3d4d5d6d7d8d9dadbdcdddedf7d7d7d7d7d7d7d7d00000000000000015a5a5a5a5a5a5a5a5a5a5a5a5a5a5a0d",
+      "kind": "envelope",
+      "messageKey": "36ab0adb243de94eac8be783114075149a1f641257fd8816412bfd26947e44b4",
+      "messageNonce": "1d56caaa40ab61f2a3f5b388",
+      "name": "env-error-rate-limited",
+      "tag": "b71f901a8844c1febed98b5772ae52e3",
+      "wire": "0102d0d1d2d3d4d5d6d7d8d9dadbdcdddedf7d7d7d7d7d7d7d7d00000000000000015a5a5a5a5a5a5a5a5a5a5a5a5a5a5a0d78aeef54591bae890d453cfa8b5bf6b180d469defaf1ae78589c8c62208051e7f786db0fff3cdb1a96449cb6fc27ec8af34c4718cab43501a7baa2b83f97ec19ae94ff2adcb5450349f018eb7e49cbcbf53228e72e2c37577d92e296309fb35c75b71f901a8844c1febed98b5772ae52e3"
+    }
+  ],
+  "file": "envelopes.json",
+  "formatVersion": 1
+}

@@ -8,4 +8,6 @@ fake_decky = types.ModuleType("decky")
 fake_decky.logger = logging.getLogger("decky-test")
 sys.modules["decky"] = fake_decky
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))
+sys.path.insert(0, str(ROOT / "py_modules"))

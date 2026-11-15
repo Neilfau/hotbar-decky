@@ -1,11 +1,11 @@
 {
   "name": "HotBar",
   "author": "Neil Faulkner",
-  "flags": ["debug"],
+  "flags": ["debug", "_root"],
   "api_version": 1,
   "publish": {
     "tags": [],
-    "description": "HotBar plugin for Decky Loader.",
+    "description": "Use a phone as a keyboard, shortcut pad and pointer for games. Pairs with the HotBar app over the local network.",
     "image": "https://opengraph.githubassets.com/1/Neilfau/hotbar-decky"
   }
 }
