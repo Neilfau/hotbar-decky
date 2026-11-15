@@ -388,11 +388,15 @@ class HotBarServer:
             return self._sealed_response(outcome.device_id, outcome.body())
         answer = await self._execute_tracked(outcome)
         response = self._sealed_response(outcome.device_id, answer)
-        if isinstance(outcome.message, Unpair):
-            # The phone gets its ok before the device goes away.
-            await response.prepare(request)
-            await response.write_eof()
-            self._spawn(self._remove_one(outcome.device_id))
+        if isinstance(outcome.message, Unpair) and self._store.get(outcome.device_id) is not None:
+            # Sealed above, which needs the key. The device is gone before the phone can see the ok, so
+            # nothing it sent behind the unpair can still run.
+            revocation = self._revoke_now([outcome.device_id], lambda: self._store.remove(outcome.device_id))
+            try:
+                await response.prepare(request)
+                await response.write_eof()
+            finally:
+                self._spawn(self._revoke_finish(*revocation))
         return response
 
     def _sealed_response(self, device_id: bytes, body: dict) -> web.Response:
@@ -518,31 +522,53 @@ class HotBarServer:
         await self._close_ws(conn, WSCloseCode.POLICY_VIOLATION)
         return False
 
-    async def _send_sealed(self, conn: _Conn, device_id: bytes, body: dict) -> None:
+    def _seal(self, conn: _Conn, device_id: bytes, body: dict) -> bytes | None:
         sealer = conn.sealers.get(device_id)
         if sealer is None:
             device = self._store.get(device_id)
             if device is None:
-                return  # revoked a moment ago; the socket is being closed
+                return None  # revoked a moment ago; the socket is being closed
             sealer = conn.sealers[device_id] = ResponseSealer(device.key, device_id)
-        await conn.ws.send_bytes(sealer.seal(body))
+        return sealer.seal(body)
+
+    async def _send_sealed(self, conn: _Conn, device_id: bytes, body: dict) -> None:
+        wire = self._seal(conn, device_id, body)
+        if wire is not None:
+            await conn.ws.send_bytes(wire)
 
     async def _worker(self, conn: _Conn) -> None:
         """Runs the connection's accepted actions one at a time, in the order they arrived."""
         try:
             while True:
                 accepted = await conn.queue.get()
+                if self._store.get(accepted.device_id) is None:
+                    continue  # its device was revoked after the frame was accepted
                 answer = await self._execute(accepted)
+                if isinstance(accepted.message, Unpair):
+                    await self._acknowledge_unpair(conn, accepted.device_id, answer)
+                    continue
                 silent = answer["type"] == "ok" and isinstance(accepted.message, (Move, Button, Scroll))
                 if not silent:
                     await self._send_sealed(conn, accepted.device_id, answer)
-                if isinstance(accepted.message, Unpair):
-                    self._spawn(self._remove_one(accepted.device_id))
         except ConnectionError:
             pass
         except Exception as exc:
             self._logger.warning(f"stream worker failed: {type(exc).__name__}")
             await self._close_ws(conn, WSCloseCode.INTERNAL_ERROR)
+
+    async def _acknowledge_unpair(self, conn: _Conn, device_id: bytes, answer: dict) -> None:
+        # Sealed first, which needs the key. The device is gone before the phone can see the ok, so nothing
+        # queued behind the unpair can run. This task is the connection's worker: it must not cancel itself
+        # before the ok is out, so the rest of the revocation waits for a task of its own.
+        wire = self._seal(conn, device_id, answer)
+        revocation = self._revoke_now(
+            [device_id], lambda: self._store.remove(device_id), keep=asyncio.current_task()
+        )
+        try:
+            if wire is not None:
+                await conn.ws.send_bytes(wire)
+        finally:
+            self._spawn(self._revoke_finish(*revocation))
 
     async def _watch_auth(self, conn: _Conn) -> None:
         await asyncio.sleep(self._auth_timeout_s)
@@ -633,7 +659,14 @@ class HotBarServer:
             await self._revoke([device_id], lambda: self._store.remove(device_id))
 
     async def _revoke(self, device_ids: list[bytes], remove: Callable[[], object]) -> None:
-        """Takes the devices out of the store, the receiver and every connection, and frees what they held."""
+        await self._revoke_finish(*self._revoke_now(device_ids, remove))
+
+    def _revoke_now(
+        self, device_ids: list[bytes], remove: Callable[[], object], keep: asyncio.Task | None = None
+    ) -> tuple[list[tuple[bytes, bytes]], list[_Conn]]:
+        """Takes the devices out of the store and the receiver and stops their work, without yielding, so
+        that from here on nothing from them is accepted. `_revoke_finish` closes and frees what is left.
+        Returns what it needs. The `keep` task is not cancelled here."""
         try:
             remove()
             self._error = None
@@ -650,6 +683,12 @@ class HotBarServer:
             self._logger.info(f"device removed {device_id.hex()}")
         self._changed()
         doomed = [conn for conn in self._conns if conn.devices.intersection(device_ids)]
+        for conn in doomed:
+            if conn.worker is not keep:
+                conn.worker.cancel()
+        return owners, doomed
+
+    async def _revoke_finish(self, owners: list[tuple[bytes, bytes]], doomed: list[_Conn]) -> None:
         for conn in doomed:
             conn.worker.cancel()
         await asyncio.gather(*(self._close_ws(conn, WSCloseCode.GOING_AWAY) for conn in doomed))

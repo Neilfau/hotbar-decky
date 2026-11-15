@@ -88,9 +88,12 @@ async def until(condition, timeout=3.0):
 class Clock:
     def __init__(self):
         self.now = 1_000_000
+        self.step = 0  # added after every reading, to space messages the server judges back to back
 
     def __call__(self):
-        return self.now
+        reading = self.now
+        self.now += self.step
+        return reading
 
     def advance(self, ms):
         self.now += ms
@@ -442,13 +445,44 @@ async def test_unpair_answers_ok_then_revokes_the_device(tmp_path, channel):
         paired = await pair(rig)
         phone = await open_phone(channel, rig, paired)
         assert await phone.ask({"type": "unpair"}) == phone.ok()
-        await until(lambda: rig.store.get(paired.device_id) is None)
+        # The device is already gone when the phone sees the ok.
+        assert rig.store.get(paired.device_id) is None
         assert rig.server.state()["devices"] == []
         assert paired.key.hex() not in rig.path.read_text()
         if channel == "stream":
             assert (await phone.closed())[-1].type in CLOSED
         status, body = await HttpPhone(rig, paired).plain(Sender(paired.device_id, paired.key).seal(HELLO))
         assert (status, body) == (401, {"error": "unknown_device"})
+
+
+@run
+async def test_commands_queued_behind_an_unpair_never_reach_the_injector(tmp_path):
+    async with make_rig(tmp_path) as rig:
+        paired = await pair(rig)
+        phone = await StreamPhone.connect(rig, paired)
+        rig.clock.step = 150  # past the press and type gap between any two frames
+        # Nothing here yields until every frame is sent, so the server has all of them queued
+        # before its worker starts on the unpair.
+        await phone.send({"type": "unpair"})
+        unpair_counter = phone.counter
+        for body in (
+            {"type": "press", "key": 4, "mods": 0},
+            {"type": "type", "text": "ab"},
+            {"type": "press", "key": 5, "mods": 0},
+            {"type": "move", "dx": 5, "dy": 5},
+            {"type": "button", "button": "left", "state": "down"},
+        ):
+            await phone.send(body)
+
+        seen = await phone.closed()
+
+        phone.counter = unpair_counter
+        assert phone._open(seen[0].data) == phone.ok()
+        assert seen[0].type is WSMsgType.BINARY and seen[-1].type in CLOSED
+        assert phone.ws.close_code == 1001
+        assert rig.kb.events == [] and rig.pointer.events == []
+        assert rig.store.get(paired.device_id) is None
+        assert paired.key.hex() not in rig.path.read_text()
 
 
 # Plaintext errors
