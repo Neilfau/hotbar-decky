@@ -10,6 +10,7 @@ _PLUGIN_DIR = Path(getattr(decky, "DECKY_PLUGIN_DIR", None) or Path(__file__).re
 if str(_PLUGIN_DIR / "py_modules") not in sys.path:
     sys.path.insert(0, str(_PLUGIN_DIR / "py_modules"))
 
+from hotbar import advertise, selfcheck  # noqa: E402
 from hotbar.input.device import InputError  # noqa: E402
 from hotbar.input.injector import Injector  # noqa: E402
 from hotbar.netutil import default_local_ip  # noqa: E402
@@ -17,6 +18,8 @@ from hotbar.server import HotBarServer  # noqa: E402
 from hotbar.store import DeviceStore, StoreError  # noqa: E402
 
 BIND_HOST = "0.0.0.0"
+UINPUT_PATH = "/dev/uinput"
+AVAHI_SERVICES_DIR = advertise.DEFAULT_SERVICES_DIR
 
 
 class _State:
@@ -57,6 +60,8 @@ class Plugin:
     # Runs in a task when the plugin is loaded.
     async def _main(self):
         _state.error = _state.server = None
+        selfcheck.run(decky.logger, uinput_path=UINPUT_PATH, services_dir=AVAHI_SERVICES_DIR)
+        advertise.withdraw(AVAHI_SERVICES_DIR, decky.logger)  # a file left by a crash names a dead port
         try:
             _state.store = DeviceStore(Path(decky.DECKY_PLUGIN_SETTINGS_DIR) / "devices.json")
         except StoreError:
@@ -81,10 +86,13 @@ class Plugin:
             bind_host=BIND_HOST,
         )
         await _state.server.start()
+        if _state.server.port is not None:
+            advertise.publish(AVAHI_SERVICES_DIR, _state.server.port, _state.store.plugin_id, decky.logger)
         decky.logger.info("HotBar loaded")
 
     # Runs when the plugin is stopped but not removed.
     async def _unload(self):
+        advertise.withdraw(AVAHI_SERVICES_DIR, decky.logger)
         if _state.server is not None:
             await _state.server.stop()
         if _state.injector is not None:
@@ -93,7 +101,7 @@ class Plugin:
 
     # Runs after _unload when the plugin is uninstalled.
     async def _uninstall(self):
-        pass
+        advertise.withdraw(AVAHI_SERVICES_DIR, decky.logger)
 
     # Runs before _main to migrate old data.
     async def _migration(self):
