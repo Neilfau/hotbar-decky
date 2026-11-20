@@ -61,6 +61,7 @@ class Plugin:
     async def _main(self):
         _state.error = _state.server = None
         selfcheck.run(decky.logger, uinput_path=UINPUT_PATH, services_dir=AVAHI_SERVICES_DIR)
+        advertise.withdraw(AVAHI_SERVICES_DIR, decky.logger)  # a file left by a crash names a dead port
         try:
             _state.store = DeviceStore(Path(decky.DECKY_PLUGIN_SETTINGS_DIR) / "devices.json")
         except StoreError:

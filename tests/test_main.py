@@ -213,3 +213,25 @@ async def test_nothing_is_published_when_the_input_device_is_missing(decky_env, 
     await plugin._main()
     assert list(decky_env.services.iterdir()) == []
     await plugin._unload()
+
+
+@run
+async def test_a_stale_service_file_is_removed_when_the_store_fails(decky_env, monkeypatch):
+    def failing_store(_path):
+        raise StoreError("cannot create the settings directory")
+
+    monkeypatch.setattr(main, "DeviceStore", failing_store)
+    (decky_env.services / "hotbar.service").write_text("left behind")
+    await main.Plugin()._main()
+    assert list(decky_env.services.iterdir()) == []
+
+
+@run
+async def test_a_stale_service_file_is_removed_when_the_input_device_fails(decky_env, monkeypatch):
+    def failing_open(_cls):
+        raise InputError("no /dev/uinput")
+
+    monkeypatch.setattr(Injector, "open_uinput", classmethod(failing_open))
+    (decky_env.services / "hotbar.service").write_text("left behind")
+    await main.Plugin()._main()
+    assert list(decky_env.services.iterdir()) == []
