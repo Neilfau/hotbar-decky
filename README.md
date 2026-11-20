@@ -4,11 +4,13 @@ HotBar is a plugin for [Decky Loader](https://github.com/SteamDeckHomebrew/decky
 the plugin loader for SteamOS on the Steam Deck. Together with the HotBar app
 it turns a phone or tablet into a keyboard, shortcut pad and pointer for games.
 
-The plugin does three things:
+The plugin does four things:
 
 - It pairs devices. The Quick Access panel shows a QR code, the app scans it,
   and both sides agree on a key that only they hold.
 - It listens on the local network for encrypted commands from paired devices.
+- It lets the app find this machine again when its address changes (see
+  [Finding the Deck again](#finding-the-deck-again)).
 - It carries out each command as keyboard or pointer input through
   `/dev/uinput`: one key press, one line of text, or one pointer event.
 
@@ -47,10 +49,14 @@ It is based on the official
     rate limits.
   - `input/`: the key table and the uinput devices.
   - `server.py`: the HTTP and WebSocket endpoints.
+  - `advertise.py`: the avahi service file that lets the app find the Deck again.
+  - `selfcheck.py`: the one-time check of Python, the crypto and the machine,
+    logged when the plugin starts.
 - `tests/`: Python tests, run with a stand-in for the `decky` module and fake
   input devices. `tests/vectors/` holds the protocol test vectors.
 - `tools/dev_server.py`: runs the backend on a development machine with fake
   input devices.
+- `tools/diagnose.py`: checks a Steam Deck over SSH.
 
 ## Requirements
 
@@ -100,6 +106,61 @@ uv run --python 3.14 --with aiohttp python tools/dev_server.py
 
 It prints a pairing link and then one line per received action. No input is
 injected.
+
+## Finding the Deck again
+
+After each start the plugin writes `/etc/avahi/services/hotbar.service`. It
+announces the service type `_hotbar._tcp` on the plugin's listening port, with
+two TXT records: `pid`, the plugin's id as lower-case hex, and `v=1`. The app
+matches `pid`, so it can find the Deck again when the Deck's address changes.
+The plugin removes the file when it stops and when it is uninstalled.
+
+- The file is written to a temporary name and renamed, so avahi never reads a
+  half-written file.
+- If `/etc/avahi/services` is missing or not writable, the plugin logs one
+  warning with the error type and carries on. The app can still reach the Deck
+  by its last address or its `.local` name.
+- If the Deck loses power or the plugin crashes, the file stays and names a
+  port nobody listens on until the next start. The app checks every address it
+  finds, so the cost is one failed attempt.
+- The file holds no key and no token. `pid` is not secret.
+
+## Diagnose a Steam Deck
+
+On start the plugin logs one `selfcheck` line per check to Decky's plugin log,
+by default in `/home/deck/homebrew/logs/HotBar/`. Each line holds a name and a
+value: a Python version, `ok` or `failed`, `true` or `false`, a user id, or a
+time in milliseconds. The checks cover Python, `hashlib`, `hmac`, `secrets`,
+`fcntl`, `ctypes`, `aiohttp`, one X25519 shared secret and one 512-byte
+ChaCha20-Poly1305 seal with the plugin's own crypto, the effective user id,
+whether `/dev/uinput` opens for writing, and whether the avahi services folder
+is writable. A failing check is logged and never stops the plugin.
+
+`tools/diagnose.py` reports the same machine facts from outside. Copy the
+repository folder to the Deck, or just `tools/` and `py_modules/`, and run it
+over SSH with `sudo`, so it has the plugin's privileges:
+
+```bash
+sudo python3 tools/diagnose.py
+```
+
+It prints the effective user id, whether `/dev/uinput` is writable, whether
+`avahi-daemon` runs, whether the service file is present, and the last
+`selfcheck` lines from the plugin log if the log is readable. It changes
+nothing. Module and crypto results come from the plugin's own lines, because
+the system Python on the Deck is not the Python Decky runs the plugin with.
+Use `--log-dir`, `--uinput` or `--services-dir` if the paths differ.
+
+To check that typing reaches a game, add `--type-test`:
+
+```bash
+sudo python3 tools/diagnose.py --type-test
+```
+
+After a 5 second countdown it types every character from space to `~` once
+through the plugin's own input code. It never presses Enter. Put the cursor in
+a text field before the countdown ends. The option exists only in this
+command-line tool, not in the panel or on the network.
 
 ## Licence
 

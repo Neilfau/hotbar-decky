@@ -49,6 +49,10 @@ def decky_env(tmp_path, monkeypatch):
     monkeypatch.setattr(decky, "emit", emit, raising=False)
     monkeypatch.setattr(main, "_state", main._State())
     monkeypatch.setattr(main, "BIND_HOST", "127.0.0.1")
+    env.services = tmp_path / "avahi"
+    env.services.mkdir()
+    monkeypatch.setattr(main, "AVAHI_SERVICES_DIR", env.services)
+    monkeypatch.setattr(main, "UINPUT_PATH", str(tmp_path / "no-uinput"))
     monkeypatch.setattr(main, "default_local_ip", lambda: "127.0.0.1")
     monkeypatch.setattr(Injector, "open_uinput", classmethod(lambda cls: cls(env.keyboard, env.pointer)))
     return env
@@ -146,3 +150,66 @@ async def test_panel_event_failure_is_logged_by_class_name_only(decky_env, monke
         assert "secret detail" not in caplog.text
     finally:
         await plugin._unload()
+
+
+@run
+async def test_start_publishes_the_service_file_and_unload_removes_it(decky_env):
+    plugin = main.Plugin()
+    await plugin._main()
+    try:
+        text = (decky_env.services / "hotbar.service").read_text()
+        assert f"<port>{main._state.server.port}</port>" in text
+        assert f"pid={main._state.store.plugin_id.hex()}" in text
+    finally:
+        await plugin._unload()
+    assert list(decky_env.services.iterdir()) == []
+
+
+@run
+async def test_uninstall_removes_the_service_file(decky_env):
+    plugin = main.Plugin()
+    await plugin._main()
+    try:
+        assert (decky_env.services / "hotbar.service").exists()
+    finally:
+        await plugin._unload()
+    (decky_env.services / "hotbar.service").write_text("left behind")
+    await plugin._uninstall()
+    assert list(decky_env.services.iterdir()) == []
+
+
+@run
+async def test_missing_services_folder_logs_one_warning_and_the_plugin_still_listens(decky_env, monkeypatch, caplog):
+    monkeypatch.setattr(main, "AVAHI_SERVICES_DIR", decky_env.services / "absent")
+    plugin = main.Plugin()
+    with caplog.at_level(logging.INFO, logger="decky-test"):
+        await plugin._main()
+    try:
+        assert (await plugin.get_state())["listening"] is True
+        warnings = [r.getMessage() for r in caplog.records if r.levelno == logging.WARNING and "service file" in r.getMessage()]
+        assert warnings == ["could not publish the service file: FileNotFoundError"]
+    finally:
+        await plugin._unload()
+
+
+@run
+async def test_start_logs_the_self_check_once(decky_env, caplog):
+    plugin = main.Plugin()
+    with caplog.at_level(logging.INFO, logger="decky-test"):
+        await plugin._main()
+    await plugin._unload()
+    lines = [r.getMessage() for r in caplog.records if r.getMessage().startswith("selfcheck ")]
+    assert sum(line.startswith("selfcheck python:") for line in lines) == 1
+    assert "selfcheck uinput_writable: false" in lines
+
+
+@run
+async def test_nothing_is_published_when_the_input_device_is_missing(decky_env, monkeypatch):
+    def failing_open(_cls):
+        raise InputError("no /dev/uinput")
+
+    monkeypatch.setattr(Injector, "open_uinput", classmethod(failing_open))
+    plugin = main.Plugin()
+    await plugin._main()
+    assert list(decky_env.services.iterdir()) == []
+    await plugin._unload()
