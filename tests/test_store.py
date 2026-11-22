@@ -211,6 +211,62 @@ def test_wide_permissions_are_tightened_on_load(path):
     assert store.devices() == [device(1)]
 
 
+def test_a_symlinked_file_is_not_loaded_and_its_target_is_untouched(path, tmp_path):
+    path.parent.mkdir()
+    target = tmp_path / "elsewhere.json"
+    target.write_text(json.dumps(valid_doc(port=1234)))
+    target.chmod(0o666)
+    before = target.read_bytes()
+    path.symlink_to(target)
+    with pytest.raises(StoreError):
+        DeviceStore(path)
+    assert target.read_bytes() == before
+    assert mode(target) == 0o666
+    assert path.is_symlink()
+
+
+@pytest.mark.parametrize("kind", ["fifo", "directory"])
+def test_a_non_regular_file_is_refused_like_a_symlink(path, kind):
+    path.parent.mkdir()
+    if kind == "fifo":
+        os.mkfifo(path)
+    else:
+        path.mkdir()
+    with pytest.raises(StoreError):
+        DeviceStore(path)
+    assert not path.is_symlink() and not path.is_file()
+
+
+def test_a_failed_remove_leaves_a_write_pending_until_a_retry_succeeds(path, monkeypatch):
+    store = DeviceStore(path)
+    store.add(device(1))
+    assert store.write_pending is False
+    with monkeypatch.context() as m:
+        m.setattr(os, "replace", failing_replace)
+        with pytest.raises(StoreError):
+            store.remove(device(1).device_id)
+        assert store.write_pending is True
+        assert DeviceStore(path).devices() == [device(1)]
+        assert store.retry_write() is False  # still failing, and it does not raise
+        assert store.write_pending is True
+    assert store.retry_write() is True
+    assert store.write_pending is False
+    assert DeviceStore(path).devices() == []
+
+
+def test_a_later_successful_write_clears_the_pending_flag(path, monkeypatch):
+    store = DeviceStore(path)
+    store.add(device(1))
+    with monkeypatch.context() as m:
+        m.setattr(os, "replace", failing_replace)
+        with pytest.raises(StoreError):
+            store.remove_all()
+    assert store.write_pending is True
+    store.set_port(5000)
+    assert store.write_pending is False
+    assert store.retry_write() is True
+
+
 def valid_doc(**changes) -> dict:
     entry = {"deviceId": "11" * 16, "deviceKey": "22" * 32, "name": "P", "createdAt": 5}
     return {**{"pluginId": "aa" * 16, "port": None, "devices": [entry]}, **changes}

@@ -1,5 +1,7 @@
 # Tests for the injector: exact event sequences on fake devices, failure cleanup and locking.
 import asyncio
+import threading
+import time
 
 import pytest
 
@@ -39,11 +41,14 @@ class FailOnWrite(FakeDevice):
 
 
 class Rig:
-    def __init__(self, keyboard=None, pointer=None, sleep=None):
+    def __init__(self, keyboard=None, pointer=None, sleep=None, hold=None):
         self.kb = keyboard or FakeDevice()
         self.ptr = pointer or FakeDevice()
         self.sleeps = []
-        self.inj = Injector(self.kb, self.ptr, sleep=sleep or self.fake_sleep)
+        self.inj = Injector(self.kb, self.ptr, sleep=sleep or self.fake_sleep, hold=hold or self.fake_hold)
+
+    def fake_hold(self, stop, seconds):
+        self.sleeps.append(seconds)
 
     async def fake_sleep(self, seconds):
         self.sleeps.append(seconds)
@@ -474,11 +479,13 @@ def test_cancelling_a_press_during_the_hold_releases_the_key_and_modifiers():
     async def go():
         entered = asyncio.Event()
 
-        async def hang(_seconds):
-            entered.set()
-            await asyncio.Event().wait()
+        loop = asyncio.get_running_loop()
 
-        rig = Rig(sleep=hang)
+        def hang(stop, _seconds):
+            loop.call_soon_threadsafe(entered.set)
+            stop.wait(10)
+
+        rig = Rig(hold=hang)
         task = asyncio.create_task(rig.inj.press(USAGE_A, 0b11))
         await entered.wait()
         assert rig.kb.events == [down(LCTRL), down(LSHIFT), SYN, down(KEY_A), SYN]
@@ -502,7 +509,7 @@ def test_cancelling_type_text_between_characters_leaves_nothing_down():
         async def sleep(seconds):
             nonlocal calls
             calls += 1
-            if calls == 2:  # the gap after the first character
+            if calls == 1:  # the gap after the first character (holds run on a worker thread)
                 gap_entered.set()
                 await asyncio.Event().wait()
 
@@ -516,6 +523,27 @@ def test_cancelling_type_text_between_characters_leaves_nothing_down():
 
     rig = run(go())
     assert rig.kb.events == [down(KEY_A), SYN, up(KEY_A), SYN]
+
+
+def test_the_hold_is_wall_clock_bounded_while_the_event_loop_is_blocked():
+    stamps = []
+
+    class Stamped(FakeDevice):
+        def write(self, events):
+            super().write(events)
+            stamps.append((time.monotonic(), events[0][1:]))
+
+    async def go():
+        inj = Injector(Stamped(), FakeDevice())
+        task = asyncio.create_task(inj.press(USAGE_A, 0))
+        await asyncio.sleep(0.005)
+        time.sleep(0.5)  # a busy loop
+        await task
+
+    run(go())
+    (t_down, d), (t_up, u) = stamps[0], stamps[1]
+    assert d == (KEY_A, 1) and u == (KEY_A, 0)
+    assert t_up - t_down < 0.2
 
 
 # --- concurrency ---------------------------------------------------------------------------

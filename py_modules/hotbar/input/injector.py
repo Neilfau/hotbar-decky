@@ -1,5 +1,6 @@
 # Turns validated key, text, pointer and scroll commands into evdev events, one action at a time.
 import asyncio
+import threading
 from collections.abc import Awaitable, Callable, Hashable, Sequence
 from contextlib import suppress
 from functools import partial
@@ -68,6 +69,11 @@ def _split_notches(remainder: int, amount: int) -> tuple[int, int]:
 _ENTER_CODE = _key_code(ENTER_USAGE)
 
 
+def _wait_hold(stop: threading.Event, seconds: float) -> None:
+    """Hold for seconds of wall-clock time, or less if stop is set."""
+    stop.wait(seconds)
+
+
 class Injector:
     """Writes input events to a keyboard and a pointer device. Every public method takes one lock,
     so the parts of one action are never split by another. Nothing here logs: keys, text and
@@ -78,10 +84,14 @@ class Injector:
         keyboard: InputDevice,
         pointer: InputDevice,
         sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
+        hold: Callable[[threading.Event, float], None] = _wait_hold,
     ) -> None:
         self._keyboard = keyboard
         self._pointer = pointer
         self._sleep = sleep
+        self._hold = hold
+        # Key presses run on a worker thread, so state and device writes are guarded by this lock.
+        self._io_lock = threading.RLock()
         self._lock = asyncio.Lock()
         self._down: list[int] = []  # keyboard codes believed down, in press order
         self._holders: dict[str, Hashable] = {}  # pointer button -> the owner that pressed it
@@ -199,35 +209,53 @@ class Injector:
                 self._pointer.close()
 
     async def _combo(self, code: int, mod_codes: Sequence[int], hold: float) -> None:
-        """Modifiers down, key down, hold, key up, modifiers up (reverse). The lock must be held."""
+        """Modifiers down, key down, hold, key up, modifiers up (reverse), all on a worker thread so
+        the hold is wall-clock time whatever the event loop is doing. The lock must be held."""
+        stop = threading.Event()
+        work = asyncio.ensure_future(asyncio.to_thread(self._combo_blocking, code, mod_codes, hold, stop))
+        try:
+            await asyncio.shield(work)
+        except asyncio.CancelledError:
+            # End the hold early and wait for the worker, which releases the keys, so nothing is
+            # written after this coroutine has gone.
+            stop.set()
+            with suppress(Exception):
+                await work
+            raise
+
+    def _combo_blocking(self, code: int, mod_codes: Sequence[int], hold: float, stop: threading.Event) -> None:
         try:
             if mod_codes:
                 self._keys_down(mod_codes)
             self._keys_down([code])
-            await self._sleep(hold)
+            self._hold(stop, hold)
+            if stop.is_set():
+                return  # cancelled: the release below lets go of everything at once
             self._keys_up([code])
             if mod_codes:
                 self._keys_up(reversed(mod_codes))
         finally:
-            # Also runs on cancellation: it must not await, and a failing device must not hide the
-            # error that is already on its way out.
+            # A failing device must not hide the error that is already on its way out.
             with suppress(InputError):
                 self._release_keys()
 
     def _keys_down(self, codes: Sequence[int]) -> None:
-        # Recorded before the write: if the write fails midway the keys may be down.
-        self._down.extend(codes)
-        self._emit(self._keyboard, [(EV_KEY, code, 1) for code in codes] + [_SYN])
+        with self._io_lock:
+            # Recorded before the write: if the write fails midway the keys may be down.
+            self._down.extend(codes)
+            self._emit(self._keyboard, [(EV_KEY, code, 1) for code in codes] + [_SYN])
 
     def _keys_up(self, codes: Sequence[int]) -> None:
         codes = list(codes)
-        self._emit(self._keyboard, [(EV_KEY, code, 0) for code in codes] + [_SYN])
-        for code in codes:
-            self._down.remove(code)
+        with self._io_lock:
+            self._emit(self._keyboard, [(EV_KEY, code, 0) for code in codes] + [_SYN])
+            for code in codes:
+                self._down.remove(code)
 
     def _release_keys(self) -> None:
-        if self._down:
-            self._keys_up(list(reversed(self._down)))
+        with self._io_lock:
+            if self._down:
+                self._keys_up(list(reversed(self._down)))
 
     def _release_button(self, button: str) -> None:
         self._emit(self._pointer, [(EV_KEY, _BUTTONS[button], 0), _SYN])
