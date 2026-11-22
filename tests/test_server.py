@@ -668,7 +668,7 @@ async def test_pointer_burst_is_dropped_silently_on_the_stream_and_buttons_are_n
 
 @run
 async def test_pointer_burst_over_http_answers_the_drop_with_a_rate_limit_error(tmp_path):
-    async with make_rig(tmp_path) as rig:
+    async with make_rig(tmp_path, challenges_per_second=1000) as rig:
         phone = await open_phone("http", rig, await pair(rig))
         move = {"type": "move", "dx": 1, "dy": 1}
         for _ in range(c.POINTER_BURST):
@@ -1098,14 +1098,38 @@ async def test_stream_failures_count_towards_the_throttle(tmp_path):
 
 
 @run
-async def test_unknown_device_is_not_counted_as_an_authentication_failure(tmp_path):
+async def test_every_plaintext_error_counts_towards_the_throttle(tmp_path):
     async with make_rig(tmp_path) as rig:
         paired = await pair(rig)
         phone = HttpPhone(rig, paired)
         stranger = Sender(os.urandom(16), os.urandom(32)).seal(HELLO)
-        for _ in range(25):
+        for _ in range(20):
             assert await phone.plain(stranger) == (401, {"error": "unknown_device"})
+        assert await phone.plain(stranger) == (429, {"error": "rate_limited"})
+        rig.clock.advance(10_000)
         assert await HttpPhone(rig, paired).ask(HELLO) is not None
+
+
+@run
+async def test_bad_messages_and_text_frames_count_towards_the_throttle(tmp_path):
+    async with make_rig(tmp_path) as rig:
+        paired = await pair(rig)
+        phone = HttpPhone(rig, paired)
+        for _ in range(10):
+            assert await phone.plain(b"short") == (400, {"error": "bad_message"})
+        stream = await StreamPhone.connect(rig, paired)
+        for _ in range(10):
+            await stream.ws.send_str("not a challenge request")
+            await stream.text()
+        assert await phone.plain(b"short") == (429, {"error": "rate_limited"})
+
+
+@run
+async def test_a_paired_phone_sending_valid_traffic_is_never_throttled(tmp_path):
+    async with make_rig(tmp_path, challenges_per_second=1000) as rig:
+        phone = await open_phone("http", rig, await pair(rig))
+        for _ in range(60):
+            assert await phone.ask(HELLO) == phone.welcome()
 
 
 # Pairing over HTTP
@@ -1446,8 +1470,8 @@ async def test_logs_never_carry_payloads_secrets_or_names(tmp_path):
         "pairing session started",
         "pairing session succeeded",
         f"device added {paired.device_id.hex()}",
-        "stream opened from 127.0.0.1",
-        "stream closed from 127.0.0.1",
+        "stream opened (1 open)",
+        "stream closed (0 open)",
         "stream message rejected: auth_failed",
         "stream message rejected: unsupported_key",
         "http message rejected: challenge_required",
