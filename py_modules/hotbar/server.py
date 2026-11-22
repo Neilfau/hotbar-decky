@@ -26,6 +26,14 @@ QUEUE_MAX = 256  # accepted actions waiting for one stream connection's worker
 THROTTLE_FAILURES = 20  # authentication failures from one address ...
 THROTTLE_WINDOW_MS = 10_000  # ... within this long block it for this long
 PING_MISSES_MAX = 2
+CONNECTIONS_PER_ADDRESS = 8
+CONNECTIONS_TOTAL = 64
+KEEPALIVE_TIMEOUT_S = 15
+BODY_TIMEOUT_S = 5.0
+CHALLENGES_PER_SECOND = 16
+REJECT_SUMMARY_MS = 60_000
+WRITE_RETRY_S = 30
+STORAGE_ERROR = "Key storage failed; a removed key may still be in the file"
 CLOSE_TIMEOUT_S = 2.0
 # Frames are checked against the protocol limits by hand, so the library cap only needs to sit a little above them.
 WS_LIBRARY_LIMIT = c.MAX_ENVELOPE_LEN + 1024
@@ -57,16 +65,78 @@ def _peer_address(request: web.BaseRequest) -> str | None:
     return peername[0] if peername else None
 
 
+class _BodyTimeout(Exception):
+    """The request body did not arrive within BODY_TIMEOUT_S."""
+
+
 async def _read_body(request: web.BaseRequest, cap: int) -> bytes | None:
-    """The request body, or None when it is longer than `cap`."""
+    """The request body, or None when it is longer than `cap`. Raises _BodyTimeout when it arrives too slowly."""
     if request.content_length is not None and request.content_length > cap:
         return None
     body = bytearray()
-    async for chunk in request.content.iter_chunked(4096):
-        body += chunk
-        if len(body) > cap:
-            return None
+    try:
+        async with asyncio.timeout(BODY_TIMEOUT_S):
+            async for chunk in request.content.iter_chunked(4096):
+                body += chunk
+                if len(body) > cap:
+                    return None
+    except TimeoutError:
+        raise _BodyTimeout from None
     return bytes(body)
+
+
+class _ConnectionCaps:
+    """Decides at connection time whether a new connection is kept: only allowed source addresses, at most
+    `per_address` open from one address and `total` overall. Refused ones are aborted before any byte is read."""
+
+    def __init__(self, per_address: int, total: int):
+        self._per_address = per_address
+        self._total = total
+        self._open: dict[object, str] = {}
+        self._counts: dict[str, int] = {}
+
+    def admit(self, handler: object, address: str | None) -> bool:
+        if not is_allowed_source(address):
+            return False
+        if len(self._open) >= self._total or self._counts.get(address, 0) >= self._per_address:
+            return False
+        self._open[handler] = address
+        self._counts[address] = self._counts.get(address, 0) + 1
+        return True
+
+    def release(self, handler: object) -> None:
+        address = self._open.pop(handler, None)
+        if address is None:
+            return
+        if self._counts[address] <= 1:
+            del self._counts[address]
+        else:
+            self._counts[address] -= 1
+
+
+def _limit_connections(server: web.Server, caps: _ConnectionCaps) -> None:
+    """Puts `caps` in front of the server's per-connection callbacks."""
+    made, lost = server.connection_made, server.connection_lost
+
+    def connection_made(handler, transport) -> None:
+        made(handler, transport)
+        peername = transport.get_extra_info("peername")
+        if not caps.admit(handler, peername[0] if peername else None):
+            transport.abort()
+
+    def connection_lost(handler, exc=None) -> None:
+        caps.release(handler)
+        lost(handler, exc)
+
+    server.connection_made, server.connection_lost = connection_made, connection_lost
+
+
+def _quiet_logger(parent: logging.Logger) -> logging.Logger:
+    """A logger for the HTTP library that writes nothing, so malformed requests leave no log lines."""
+    quiet = logging.getLogger(f"{parent.name}.http")
+    quiet.setLevel(logging.CRITICAL + 1)
+    quiet.propagate = False
+    return quiet
 
 
 @dataclass(eq=False)
@@ -106,6 +176,7 @@ class HotBarServer:
         plain_error_max: int = c.WS_PLAIN_ERROR_MAX,
         throttle_failures: int = THROTTLE_FAILURES,
         throttle_window_ms: int = THROTTLE_WINDOW_MS,
+        challenges_per_second: int = CHALLENGES_PER_SECOND,
     ):
         self._store = store
         self._injector = injector
@@ -120,6 +191,10 @@ class HotBarServer:
         self._ping_interval_s = ping_interval_s
         self._plain_error_max = plain_error_max
         self._throttle = AddressThrottle(throttle_failures, throttle_window_ms)
+        self._challenge_rate = AddressThrottle(challenges_per_second, 1000)
+        self._reject_counts: dict[str, int] = {}
+        self._reject_since_ms: int | None = None
+        self._write_timer: asyncio.TimerHandle | None = None
         self._receiver = Receiver(
             self._device_key,
             keymap.key_supported,
@@ -142,8 +217,16 @@ class HotBarServer:
             return
         app = web.Application(middlewares=[self._guard])
         app.router.add_route("*", "/{tail:.*}", self._route)
-        runner = web.AppRunner(app, access_log=None, logger=self._logger, shutdown_timeout=1.0)
+        app.on_response_prepare.append(self._drop_server_header)
+        runner = web.AppRunner(
+            app,
+            access_log=None,
+            logger=_quiet_logger(self._logger),
+            shutdown_timeout=1.0,
+            keepalive_timeout=KEEPALIVE_TIMEOUT_S,
+        )
         await runner.setup()
+        _limit_connections(runner.server, _ConnectionCaps(CONNECTIONS_PER_ADDRESS, CONNECTIONS_TOTAL))
         try:
             port = await self._listen(runner)
         except OSError as exc:
@@ -174,6 +257,9 @@ class HotBarServer:
             conn.worker.cancel()
         await asyncio.gather(*(self._close_ws(conn, WSCloseCode.GOING_AWAY) for conn in conns))
         self._end_pairing("stopped")
+        if self._write_timer is not None:
+            self._write_timer.cancel()
+            self._write_timer = None
         await asyncio.gather(*self._tasks, return_exceptions=True)
         await self._release_all()
         await runner.cleanup()
@@ -227,7 +313,7 @@ class HotBarServer:
         if not self._listening:
             self._error = self._error or "Not listening"
         elif address is None:
-            self._error = "No local network address"
+            self._error = self._storage_error() or "No local network address"
         else:
             try:
                 self._pairing = PairingSession(
@@ -238,9 +324,9 @@ class HotBarServer:
                     now_s=self._now_s(),
                 )
             except ValueError:
-                self._error = "Could not create the pairing code"
+                self._error = self._storage_error() or "Could not create the pairing code"
             else:
-                self._error = None
+                self._error = self._storage_error()
                 self._logger.info("pairing session started")
                 self._arm_pairing_timer()
         self._changed()
@@ -308,20 +394,29 @@ class HotBarServer:
 
     # HTTP
 
+    async def _drop_server_header(self, request: web.Request, response: web.StreamResponse) -> None:
+        response.headers.pop("Server", None)
+
     @web.middleware
     async def _guard(self, request: web.Request, handler):
         if self._runner is None or not is_allowed_source(_peer_address(request)):
             # No status line at all: the connection just ends. The response below is never written.
-            if request.transport is not None:
-                request.transport.close()
-            return web.Response()
+            return self._hang_up(request)
         try:
             return await handler(request)
         except web.HTTPException:
             raise
+        except _BodyTimeout:
+            return self._hang_up(request)
         except Exception as exc:
             self._logger.warning(f"request failed: {type(exc).__name__}")
             return _plain("internal")
+
+    @staticmethod
+    def _hang_up(request: web.Request) -> web.Response:
+        if request.transport is not None:
+            request.transport.close()
+        return web.Response()
 
     async def _route(self, request: web.Request) -> web.StreamResponse:
         match = _PATH_VERSION.match(request.path)
@@ -365,8 +460,20 @@ class HotBarServer:
         self._after_pairing_request()
         return _json(status, answer)
 
+    def _issue_challenge(self, peer: str) -> bytes | None:
+        """A new challenge, or None when `peer` has asked for too many a second."""
+        now = self._clock_ms()
+        if self._challenge_rate.blocked(peer, now):
+            return None
+        self._challenge_rate.record_failure(peer, now)
+        return self._receiver.issue_challenge(peer, now)
+
     async def _challenge(self, request: web.Request) -> web.Response:
-        challenge = self._receiver.issue_challenge(_peer_address(request) or "", self._clock_ms())
+        if request.content_length or "Transfer-Encoding" in request.headers:
+            return _plain("bad_message", 413)
+        challenge = self._issue_challenge(_peer_address(request) or "")
+        if challenge is None:
+            return _plain("rate_limited")
         return _json(200, {"challenge": challenge.hex(), "ttlMs": c.CHALLENGE_TTL_MS})
 
     async def _cmd(self, request: web.Request) -> web.Response:
@@ -380,8 +487,7 @@ class HotBarServer:
         outcome = self._receiver.receive(wire, now)
         if isinstance(outcome, PlainError):
             self._rejected("http", outcome.code)
-            if outcome.code == "auth_failed":
-                self._throttle.record_failure(peer, now)
+            self._throttle.record_failure(peer, now)
             return _plain(outcome.code)
         if isinstance(outcome, SealedError):
             self._rejected("http", outcome.code)
@@ -432,7 +538,7 @@ class HotBarServer:
         await ws.prepare(request)
         conn = _Conn(ws, _peer_address(request) or "", request.transport)
         self._conns.add(conn)
-        self._logger.info(f"stream opened from {conn.peer}")
+        self._logger.info(f"stream opened ({len(self._conns)} open)")
         conn.worker = asyncio.create_task(self._worker(conn))
         conn.watchers = [asyncio.create_task(self._watch_auth(conn)), asyncio.create_task(self._watch_pings(conn))]
         try:
@@ -469,11 +575,10 @@ class HotBarServer:
         if len(data) <= c.TEXT_FRAME_MAX:
             try:
                 if messages.parse_object(data) == _CHALLENGE_REQUEST:
-                    await self._send_challenge(conn)
-                    return True
+                    return await self._send_challenge(conn)
             except BodyError:
                 pass
-        return await self._send_plain(conn, PlainError("bad_message"))
+        return await self._send_plain(conn, PlainError("bad_message"), self._clock_ms())
 
     async def _on_binary(self, conn: _Conn, wire: bytes) -> bool:
         if len(wire) > c.MAX_ENVELOPE_LEN:
@@ -486,10 +591,9 @@ class HotBarServer:
         outcome = self._receiver.receive(wire, now)
         if isinstance(outcome, PlainError):
             self._rejected("stream", outcome.code)
-            if outcome.code == "auth_failed":
-                self._throttle.record_failure(conn.peer, now)
-            return await self._send_plain(conn, outcome)
+            return await self._send_plain(conn, outcome, now)
         conn.authentic = True
+        conn.senders.add((outcome.device_id, outcome.sender_id))
         if outcome.device_id not in conn.devices:
             conn.devices.add(outcome.device_id)
             self._changed()
@@ -498,7 +602,6 @@ class HotBarServer:
             if not outcome.silent_on_stream:
                 await self._send_sealed(conn, outcome.device_id, outcome.body())
             return True
-        conn.senders.add((outcome.device_id, outcome.sender_id))
         try:
             conn.queue.put_nowait(outcome)
         except asyncio.QueueFull:
@@ -507,14 +610,21 @@ class HotBarServer:
             return False
         return True
 
-    async def _send_challenge(self, conn: _Conn) -> None:
-        challenge = self._receiver.issue_challenge(conn.peer, self._clock_ms())
+    async def _send_challenge(self, conn: _Conn) -> bool:
+        """Sends a challenge, or the rate_limited error when the address asks for too many; False once the socket is closed."""
+        challenge = self._issue_challenge(conn.peer)
+        if challenge is None:
+            return await self._send_plain(conn, PlainError("rate_limited"))
         await conn.ws.send_str(
             json.dumps({"type": "challenge", "challenge": challenge.hex(), "ttlMs": c.CHALLENGE_TTL_MS}, separators=(",", ":"))
         )
+        return True
 
-    async def _send_plain(self, conn: _Conn, error: PlainError) -> bool:
-        """Sends a plaintext error frame; False once the socket has had its fill of them and is closed."""
+    async def _send_plain(self, conn: _Conn, error: PlainError, counted_at_ms: int | None = None) -> bool:
+        """Sends a plaintext error frame; False once the socket has had its fill of them and is closed.
+        Given a time, the error also counts against the source address."""
+        if counted_at_ms is not None:
+            self._throttle.record_failure(conn.peer, counted_at_ms)
         conn.plain_errors += 1
         await conn.ws.send_str(json.dumps({"type": "error", **error.body()}, separators=(",", ":")))
         if conn.plain_errors < self._plain_error_max:
@@ -618,7 +728,7 @@ class HotBarServer:
         await asyncio.gather(*tasks, return_exceptions=True)
         for device_id, sender_id in conn.senders:
             self._receiver.drop_sender(device_id, sender_id)
-        self._logger.info(f"stream closed from {conn.peer}")
+        self._logger.info(f"stream closed ({len(self._conns)} open)")
         if conn.devices:
             self._changed()
         for owner in conn.senders:
@@ -669,11 +779,13 @@ class HotBarServer:
         Returns what it needs. The `keep` task is not cancelled here."""
         try:
             remove()
-            self._error = None
+            self._error = self._storage_error()
         except StoreError:
             # The store has already dropped the keys from memory, so the devices are revoked either way.
             self._logger.warning("could not save the device list after a removal")
-            self._error = "Key storage failed; a removed key may still be in the file"
+            self._error = STORAGE_ERROR
+        if self._error == STORAGE_ERROR:
+            self._arm_write_retry()
         owners = []
         for device_id in device_ids:
             owners += [key for key in self._receiver.senders if key[0] == device_id]
@@ -723,9 +835,36 @@ class HotBarServer:
         except Exception as exc:
             self._logger.warning(f"background task failed: {type(exc).__name__}")
 
+    def _storage_error(self) -> str | None:
+        return STORAGE_ERROR if self._store.write_pending else None
+
+    def _arm_write_retry(self) -> None:
+        if self._write_timer is None and self._runner is not None:
+            self._write_timer = asyncio.get_running_loop().call_later(WRITE_RETRY_S, self._retry_write)
+
+    def _retry_write(self) -> None:
+        self._write_timer = None
+        if self._store.retry_write():
+            if self._error == STORAGE_ERROR:
+                self._error = None
+                self._changed()
+        else:
+            self._arm_write_retry()
+
     def _rejected(self, channel: str, code: str, silent: bool = False) -> None:
-        log = self._logger.debug if silent else self._logger.info
-        log(f"{channel} message rejected: {code}")
+        """Logs a refused message at debug, plus a count per code in one info line a minute at most."""
+        self._logger.debug(f"{channel} message rejected: {code}")
+        if silent:
+            return
+        now = self._clock_ms()
+        if self._reject_since_ms is None:
+            self._reject_since_ms = now
+        self._reject_counts[code] = self._reject_counts.get(code, 0) + 1
+        if now - self._reject_since_ms >= REJECT_SUMMARY_MS:
+            counts = ", ".join(f"{code}={n}" for code, n in sorted(self._reject_counts.items()))
+            self._logger.info(f"messages rejected since the last summary: {counts}")
+            self._reject_counts.clear()
+            self._reject_since_ms = None
 
     def _changed(self) -> None:
         if self._on_change is None:

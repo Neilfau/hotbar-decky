@@ -1,5 +1,6 @@
 # Keeps the plugin id and the paired devices in an owner-only JSON file.
 import contextlib
+import errno
 import json
 import os
 import stat
@@ -60,11 +61,12 @@ class DeviceStore:
         self._path = Path(path)
         self._random = random
         self.recovered_from_corruption = False
+        self._write_pending = False
         try:
             self._path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
         except OSError as exc:
             raise StoreError("cannot create the settings directory") from exc
-        if self._path.exists():
+        if os.path.lexists(self._path):
             self._load()
         else:
             self._start_fresh()
@@ -104,10 +106,26 @@ class DeviceStore:
     def remove_all(self) -> None:
         self._drop({})
 
+    @property
+    def write_pending(self) -> bool:
+        """True while the file still holds state that memory has dropped, after a failed write."""
+        return self._write_pending
+
+    def retry_write(self) -> bool:
+        """Writes the in-memory state again if a write is pending. Returns True when nothing is pending afterwards."""
+        if self._write_pending:
+            with contextlib.suppress(StoreError):
+                self._write(self.plugin_id, self._port, self._devices)
+        return not self._write_pending
+
     def _drop(self, remaining: dict[bytes, Device]) -> None:
         # A revoked key leaves memory first, so it stops working even if the file write fails.
         self._devices = remaining
-        self._write(self.plugin_id, self._port, remaining)
+        try:
+            self._write(self.plugin_id, self._port, remaining)
+        except StoreError:
+            self._write_pending = True
+            raise
 
     def _start_fresh(self) -> None:
         self.plugin_id = self._random(c.PLUGIN_ID_LEN)
@@ -117,9 +135,7 @@ class DeviceStore:
 
     def _load(self) -> None:
         try:
-            if stat.S_IMODE(self._path.stat().st_mode) & 0o177:
-                self._path.chmod(0o600)
-            raw = self._path.read_bytes()
+            raw = self._read_regular_file()
         except OSError as exc:
             raise StoreError("cannot read the device file") from exc
         try:
@@ -128,6 +144,27 @@ class DeviceStore:
             self._set_aside()
             self.recovered_from_corruption = True
             self._start_fresh()
+
+    def _read_regular_file(self) -> bytes:
+        """Reads the device file through one descriptor opened without following a symlink.
+        A symlink or a path that is not a regular file is unreadable."""
+        flags = os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK | getattr(os, "O_CLOEXEC", 0)
+        try:
+            fd = os.open(self._path, flags)
+        except OSError as exc:
+            if exc.errno == errno.ELOOP:
+                raise OSError(errno.ELOOP, "symlink") from None
+            raise
+        try:
+            info = os.fstat(fd)
+            if not stat.S_ISREG(info.st_mode):
+                raise OSError(errno.EINVAL, "not a regular file")
+            if stat.S_IMODE(info.st_mode) & 0o177:
+                os.fchmod(fd, 0o600)
+            with os.fdopen(fd, "rb", closefd=False) as handle:
+                return handle.read()
+        finally:
+            os.close(fd)
 
     def _set_aside(self) -> None:
         target = self._path.with_name(self._path.name + ".corrupt")
@@ -175,3 +212,4 @@ class DeviceStore:
                 os.close(dir_fd)
         except OSError as exc:
             raise StoreError("cannot write the device file") from exc
+        self._write_pending = False

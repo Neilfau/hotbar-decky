@@ -78,6 +78,11 @@ def gated_sleep():
     return sleep
 
 
+def gated_hold(stop, _seconds):
+    """A key hold that never finishes on its own, so a press stays in flight until it is stopped."""
+    stop.wait()
+
+
 async def until(condition, timeout=3.0):
     deadline = asyncio.get_running_loop().time() + timeout
     while not condition():
@@ -114,7 +119,7 @@ class Rig:
 
 
 @contextlib.asynccontextmanager
-async def make_rig(tmp_path, *, sleep=instant_sleep, store_port=None, start=True, **server_kwargs):
+async def make_rig(tmp_path, *, sleep=instant_sleep, hold=None, store_port=None, start=True, **server_kwargs):
     rig = Rig()
     rig.clock = Clock()
     rig.path = tmp_path / "devices.json"
@@ -122,7 +127,7 @@ async def make_rig(tmp_path, *, sleep=instant_sleep, store_port=None, start=True
     if store_port is not None:
         rig.store.set_port(store_port)
     rig.kb, rig.pointer = FakeDevice(), FakeDevice()
-    rig.injector = Injector(rig.kb, rig.pointer, sleep)
+    rig.injector = Injector(rig.kb, rig.pointer, sleep, *([hold] if hold else []))
     rig.records = []
     rig.changes = 0
     rig.snapshots = []
@@ -668,7 +673,7 @@ async def test_pointer_burst_is_dropped_silently_on_the_stream_and_buttons_are_n
 
 @run
 async def test_pointer_burst_over_http_answers_the_drop_with_a_rate_limit_error(tmp_path):
-    async with make_rig(tmp_path) as rig:
+    async with make_rig(tmp_path, challenges_per_second=1000) as rig:
         phone = await open_phone("http", rig, await pair(rig))
         move = {"type": "move", "dx": 1, "dy": 1}
         for _ in range(c.POINTER_BURST):
@@ -820,7 +825,7 @@ async def test_button_of_an_evicted_sender_is_released(tmp_path, monkeypatch):
 
 @run
 async def test_stream_closed_during_a_long_type_leaves_no_key_down(tmp_path):
-    async with make_rig(tmp_path, sleep=gated_sleep()) as rig:
+    async with make_rig(tmp_path, sleep=gated_sleep(), hold=gated_hold) as rig:
         phone = await StreamPhone.connect(rig, await pair(rig))
         await phone.send({"type": "type", "text": "ab"})
         await until(lambda: rig.kb.events == [down(KEY_A), SYN])
@@ -832,7 +837,7 @@ async def test_stream_closed_during_a_long_type_leaves_no_key_down(tmp_path):
 
 @run
 async def test_revoking_a_device_cancels_its_http_action_in_flight(tmp_path):
-    async with make_rig(tmp_path, sleep=gated_sleep()) as rig:
+    async with make_rig(tmp_path, sleep=gated_sleep(), hold=gated_hold) as rig:
         paired = await pair(rig)
         request = asyncio.create_task(HttpPhone(rig, paired).ask({"type": "type", "text": "a"}))
         await until(lambda: rig.kb.events == [down(KEY_A), SYN])
@@ -844,7 +849,7 @@ async def test_revoking_a_device_cancels_its_http_action_in_flight(tmp_path):
 
 @run
 async def test_full_queue_closes_the_socket(tmp_path):
-    async with make_rig(tmp_path, sleep=gated_sleep()) as rig:
+    async with make_rig(tmp_path, sleep=gated_sleep(), hold=gated_hold) as rig:
         phone = await StreamPhone.connect(rig, await pair(rig))
         await phone.send({"type": "type", "text": "a"})
         await until(lambda: rig.kb.events == [down(KEY_A), SYN])
@@ -1098,14 +1103,38 @@ async def test_stream_failures_count_towards_the_throttle(tmp_path):
 
 
 @run
-async def test_unknown_device_is_not_counted_as_an_authentication_failure(tmp_path):
+async def test_every_plaintext_error_counts_towards_the_throttle(tmp_path):
     async with make_rig(tmp_path) as rig:
         paired = await pair(rig)
         phone = HttpPhone(rig, paired)
         stranger = Sender(os.urandom(16), os.urandom(32)).seal(HELLO)
-        for _ in range(25):
+        for _ in range(20):
             assert await phone.plain(stranger) == (401, {"error": "unknown_device"})
+        assert await phone.plain(stranger) == (429, {"error": "rate_limited"})
+        rig.clock.advance(10_000)
         assert await HttpPhone(rig, paired).ask(HELLO) is not None
+
+
+@run
+async def test_bad_messages_and_text_frames_count_towards_the_throttle(tmp_path):
+    async with make_rig(tmp_path) as rig:
+        paired = await pair(rig)
+        phone = HttpPhone(rig, paired)
+        for _ in range(10):
+            assert await phone.plain(b"short") == (400, {"error": "bad_message"})
+        stream = await StreamPhone.connect(rig, paired)
+        for _ in range(10):
+            await stream.ws.send_str("not a challenge request")
+            await stream.text()
+        assert await phone.plain(b"short") == (429, {"error": "rate_limited"})
+
+
+@run
+async def test_a_paired_phone_sending_valid_traffic_is_never_throttled(tmp_path):
+    async with make_rig(tmp_path, challenges_per_second=1000) as rig:
+        phone = await open_phone("http", rig, await pair(rig))
+        for _ in range(60):
+            assert await phone.ask(HELLO) == phone.welcome()
 
 
 # Pairing over HTTP
@@ -1446,8 +1475,8 @@ async def test_logs_never_carry_payloads_secrets_or_names(tmp_path):
         "pairing session started",
         "pairing session succeeded",
         f"device added {paired.device_id.hex()}",
-        "stream opened from 127.0.0.1",
-        "stream closed from 127.0.0.1",
+        "stream opened (1 open)",
+        "stream closed (0 open)",
         "stream message rejected: auth_failed",
         "stream message rejected: unsupported_key",
         "http message rejected: challenge_required",
