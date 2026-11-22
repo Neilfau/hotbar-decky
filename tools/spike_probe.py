@@ -42,7 +42,7 @@ from hotbar.advertise import DEFAULT_SERVICES_DIR, SERVICE_FILE_NAME, SERVICE_TY
 from hotbar.input.device import InputError  # noqa: E402
 from hotbar.input.injector import Injector  # noqa: E402
 from hotbar.input.keymap import char_supported  # noqa: E402
-from hotbar.selfcheck import uinput_writable  # noqa: E402
+from hotbar.selfcheck import PREFIX, uinput_writable  # noqa: E402
 
 Runner = Callable[[list[str], float], str | None]
 
@@ -57,6 +57,8 @@ PROBE_FILE_NAME = "hotbar-probe.service"
 PROBE_TYPE = "_hotbarprobe._tcp"
 PROBE_PORT = 9
 
+DECKY_MODULE_CHECKS = ("hashlib_sha256", "hmac", "secrets", "fcntl", "ctypes", "aiohttp")
+
 TYPING_TESTS: tuple[tuple[str, str], ...] = (
     ("plain ASCII", "HotBar probe 123"),
     ("password symbols", string.punctuation),
@@ -64,6 +66,7 @@ TYPING_TESTS: tuple[tuple[str, str], ...] = (
     ("emoji", "🎮👍😀"),
 )
 
+_RELOAD = ["avahi-daemon", "--reload"]
 _SELFCHECK = re.compile(r"\bselfcheck (\w+): (.*)$")
 _AVAHI_ESCAPE = re.compile(r"\\(\d{3})")
 _MS = re.compile(r"^(\d+) ms$")
@@ -150,6 +153,15 @@ def find_log_dir(homebrew: Path) -> Path | None:
     return None
 
 
+def fallback_log_dir(homebrew: Path) -> Path | None:
+    """The plugin's own log folder when no log holds self-check lines, so a failed start can still be read."""
+    folder = find_plugin_folder(homebrew)
+    for candidate in [homebrew / "logs" / PLUGIN_NAME, *([homebrew / "logs" / folder.name] if folder else [])]:
+        if candidate.is_dir():
+            return candidate
+    return None
+
+
 def newest_log(folder: Path) -> Path | None:
     try:
         logs = [p for p in folder.glob("*.log") if p.is_file()]
@@ -165,7 +177,11 @@ def import_errors(log: Path | None) -> list[str]:
         text = log.read_text(errors="replace")
     except OSError:
         return []
-    return [line.strip() for line in text.splitlines() if "ModuleNotFoundError" in line or "ImportError" in line]
+    return [
+        line.strip()
+        for line in text.splitlines()
+        if ("ModuleNotFoundError" in line or "ImportError" in line) and f" {PREFIX} " not in line
+    ]
 
 
 def loader_uids(proc_dir: Path) -> list[int]:
@@ -282,16 +298,23 @@ def _wait_for_probe(runner: Runner, sleep: Callable[[float], None]) -> float | N
 
 def pickup_test(services_dir: Path, runner: Runner, sleep: Callable[[float], None]) -> list[str]:
     """Does avahi announce a service file written while it runs, without a restart?"""
+    if browse(runner, PROBE_TYPE):
+        return [
+            f"pickup test skipped: {PROBE_TYPE} is already announced, left from an earlier run; "
+            "run `sudo avahi-daemon --reload`, then run the probe again"
+        ]
     try:
         path = write_probe_file(services_dir)
     except OSError as exc:
         return [f"pickup test skipped: cannot write to {services_dir} ({type(exc).__name__}); run with sudo"]
+    reloaded = False
     try:
         seen = _wait_for_probe(runner, sleep)
         if seen is not None:
             return [f"pickup without restart: yes, announced after about {seen:.0f} s"]
         lines = [f"pickup without restart: no, not announced within {PICKUP_ATTEMPTS} tries"]
-        if runner(["avahi-daemon", "--reload"], BROWSE_TIMEOUT_S) is None:
+        reloaded = runner(_RELOAD, BROWSE_TIMEOUT_S) is not None
+        if not reloaded:
             lines.append("avahi-daemon --reload: failed")
         elif _wait_for_probe(runner, sleep) is not None:
             lines.append("after avahi-daemon --reload: announced, so the plugin has to ask avahi to reload")
@@ -301,6 +324,9 @@ def pickup_test(services_dir: Path, runner: Runner, sleep: Callable[[float], Non
     finally:
         with contextlib.suppress(OSError):
             path.unlink()
+        if reloaded:
+            # This avahi does not notice removed files either, so withdraw the announcement the reload made.
+            runner(_RELOAD, BROWSE_TIMEOUT_S)
 
 
 def section_modules(modules: list[str], frozen: dict[str, str], log: Path | None) -> list[str]:
@@ -311,16 +337,24 @@ def section_modules(modules: list[str], frozen: dict[str, str], log: Path | None
         f"missing in system python: {', '.join(missing) or 'none'}"
         + (" (Decky bundles aiohttp, so missing here is expected)" if missing == ["aiohttp"] else ""),
     ]
-    if not frozen:
-        lines.append("decky python: unknown, no self-check lines in the plugin log (start the plugin, then run again)")
-        return lines
-    lines.append(f"decky python: {frozen.get('python', 'not logged')}")
-    for name in ("hashlib_sha256", "hmac", "secrets", "fcntl", "ctypes", "aiohttp"):
-        lines.append(f"decky {name}: {frozen.get(name, 'not logged')}")
-    lines.append("decky python loaded every module above: yes (the self-check runs after all of the plugin's imports)")
     errors = import_errors(log)
+    if not frozen:
+        if errors:
+            lines.append("decky python: the plugin failed to import, so it never reached its self-check")
+        else:
+            lines.append("decky python: unknown, no self-check lines in the plugin log (start the plugin, then run again)")
+    else:
+        lines.append(f"decky python: {frozen.get('python', 'not logged')}")
+        for name in DECKY_MODULE_CHECKS:
+            lines.append(f"decky {name}: {frozen.get(name, 'not logged')}")
+        failed = [name for name in DECKY_MODULE_CHECKS if frozen.get(name) != "ok"]
+        if failed or errors:
+            lines.append(f"decky python loaded every module above: no ({', '.join(failed) or 'see the import errors'})")
+        else:
+            # The self-check runs after main.py and every plugin module have been imported.
+            lines.append("decky python loaded every module above: yes")
     if errors:
-        lines.append("import errors in the plugin log:")
+        lines.append(f"import errors in {log}:")
         lines.extend(f"  {line}" for line in errors[-5:])
     return lines
 
@@ -331,7 +365,7 @@ def section_speed(frozen: dict[str, str], runs: int) -> list[str]:
         lines.append(f"system python {name}: {median:.0f} ms median, {slowest:.0f} ms slowest of {runs}")
     shared = frozen.get("x25519_shared")
     if shared is None:
-        lines.append("decky python: unknown, no self-check lines in the plugin log")
+        lines.append("decky timings: unknown, no self-check lines in the plugin log")
         return lines
     lines.append(f"decky x25519_shared (one key agreement): {shared}")
     lines.append(f"decky chacha20poly1305_seal_512: {frozen.get('chacha20poly1305_seal_512', 'not logged')}")
@@ -382,10 +416,14 @@ def section_discovery(services_dir: Path, proc_dir: Path, runner: Runner, sleep:
     ]
     if not running:
         return lines
+    name = socket.gethostname() or "steamdeck"
+    host = f"{name}.local"
     if shutil.which("avahi-browse") is None:
         lines.append("avahi-browse not installed: local resolve and pickup test skipped")
     else:
         found = browse(runner, SERVICE_TYPE)
+        if found:
+            name, host = found[0]["name"], found[0]["host"]
         if not found:
             lines.append(f"{SERVICE_TYPE} on this Deck: not resolved")
         else:
@@ -395,16 +433,16 @@ def section_discovery(services_dir: Path, proc_dir: Path, runner: Runner, sleep:
                     f"({entry['interface']} {entry['protocol']}) {entry['txt']}"
                 )
         lines.extend(pickup_test(services_dir, runner, sleep))
-    host = socket.gethostname() or "steamdeck"
     lines += [
         "from a Mac on the same network, run these and note what they print:",
         f"  dns-sd -B {SERVICE_TYPE} local.",
-        f'  dns-sd -L "{host}" {SERVICE_TYPE} local.',
+        f'  dns-sd -L "{name}" {SERVICE_TYPE} local.',
+        f"  dns-sd -G v4 {host}",
     ]
     return lines
 
 
-def section_logs(homebrew: Path, log_dir: Path | None) -> list[str]:
+def section_logs(homebrew: Path, log_dir: Path | None, log: Path | None) -> list[str]:
     expected = homebrew / "logs" / PLUGIN_NAME
     folder = find_plugin_folder(homebrew)
     lines = [
@@ -413,8 +451,9 @@ def section_logs(homebrew: Path, log_dir: Path | None) -> list[str]:
     ]
     if log_dir is None:
         lines.append(f"self-check lines: not found in any folder under {homebrew / 'logs'}")
+        if log is not None:
+            lines.append(f"newest plugin log, without self-check lines: {log}")
     else:
-        log = newest_log(log_dir)
         lines.append(f"log with the self-check lines: {log if log else log_dir}")
     lines.append("decky loader log: journalctl -b -u plugin_loader --no-pager")
     return lines
@@ -430,6 +469,9 @@ async def type_tests(injector: Injector, tests: tuple[tuple[str, str], ...] = TY
             if typed:
                 await injector.type_text(" ", None, False)
             await injector.type_text(text, None, False)
+        except InputError:
+            lines.append(f"{label}: failed, could not write to the virtual input devices")
+            break
         except ValueError:
             refused = dict.fromkeys(ch for ch in text if not char_supported(ch))
             listed = " ".join(f"{ch} U+{ord(ch):04X}" for ch in refused)
@@ -452,8 +494,6 @@ def section_typing(countdown: int, sleep: Callable[[float], None], open_injector
             print(f"typing in {left}... put the cursor in a text field on the Deck", flush=True)
             sleep(1)
         lines = asyncio.run(type_tests(injector))
-    except InputError:
-        lines = ["typing test failed: could not write to the virtual input devices"]
     finally:
         injector.close()
     lines.append("steam keyboard: not applicable, the plugin types only through /dev/uinput")
@@ -485,14 +525,15 @@ def main(
 
     log_dir = find_log_dir(args.homebrew)
     frozen = selfcheck_values(diagnose.last_selfcheck_lines(log_dir) or []) if log_dir else {}
-    log = newest_log(log_dir) if log_dir else None
+    read_dir = log_dir or fallback_log_dir(args.homebrew)
+    log = newest_log(read_dir) if read_dir else None
 
     print(f"HotBar device probe, {time.strftime('%Y-%m-%d %H:%M:%S')}, {platform.platform()}", flush=True)
     _print_section("1. Python modules", section_modules(plugin_imports(), frozen, log))
     _print_section("2. Crypto speed", section_speed(frozen, max(1, args.timing_runs)))
     _print_section("3. Input device", section_input(args.uinput, args.proc_dir, frozen, log))
     _print_section("5. Service discovery", section_discovery(args.services_dir, args.proc_dir, runner, sleep))
-    _print_section("6. Logs", section_logs(args.homebrew, log_dir))
+    _print_section("6. Logs", section_logs(args.homebrew, log_dir, log))
     if args.no_type:
         _print_section("4. Typing", ["skipped (--no-type)"])
     else:

@@ -15,7 +15,8 @@ before running the probe.
 - It writes `/etc/avahi/services/hotbar-probe.service` (type
   `_hotbarprobe._tcp`, port 9), waits for avahi to announce it, and removes
   it again. Only if avahi does not announce it on its own does the probe run
-  `avahi-daemon --reload` and check again.
+  `avahi-daemon --reload` and check again, and then reloads once more after
+  removing the file so the announcement goes away.
 - At the end it types four test lines into the focused window through the
   plugin's own input code. It never presses Enter. `--no-type` skips this.
 - It reads the plugin log and the plugin manifests. It never reads the
@@ -60,8 +61,9 @@ On the Mac, while the plugin is running on the Deck:
 dns-sd -B _hotbar._tcp local.
 ```
 
-The probe also prints a `dns-sd -L` line with the Deck's host name, which
-resolves the address and port. Stop each `dns-sd` with Ctrl-C.
+The probe also prints a `dns-sd -L` line with the name avahi announced,
+which gives the host name and port, and a `dns-sd -G v4` line, which gives
+the address. Stop each `dns-sd` with Ctrl-C.
 
 To copy the output to the Mac:
 
@@ -99,20 +101,24 @@ Fill in from the probe output. Section numbers match the probe's headings.
 | 5c | `_hotbar._tcp` resolves on the Deck | `_hotbar._tcp on this Deck:` | |
 | 5d | avahi picks up a new service file without a restart | `pickup without restart:` | |
 | 5e | `dns-sd -B _hotbar._tcp` on the Mac lists the Deck | (Mac) | |
-| 5f | `dns-sd -L` on the Mac gives the Deck's address and port | (Mac) | |
+| 5f | `dns-sd -L` and `dns-sd -G v4` on the Mac give the Deck's host name, port and address | (Mac) | |
 | 6a | Plugin log file | `log with the self-check lines:` | |
 | 6b | Plugin folder | `plugin folder:` | |
 | — | SteamOS version and channel, Deck model (LCD or OLED), Decky version, HotBar version | (Settings) | |
 
 ## Reading the results
 
-- **No self-check lines.** Rows 1a to 3c say "unknown". The plugin has not
-  started, or its log is somewhere the probe did not look. Check row 6a and
+- **No self-check lines.** The probe says "unknown" for Decky's Python, its
+  timings, and the plugin's uid and uinput access, and leaves out the lines
+  that depend on them. The plugin has not started, or its log is somewhere
+  the probe did not look. Check row 6a and
   `journalctl -b -u plugin_loader --no-pager | grep -i hotbar`.
 - **1c.** The self-check runs after `main.py` and every plugin module have
-  been imported, so its lines in the log prove each module listed loads in
-  Decky's Python. An `import errors in the plugin log:` block means a module
-  failed in an earlier start.
+  been imported, so "yes" means each module listed loads in Decky's Python
+  and every module check in 1b read `ok`. "no" names the checks that failed.
+  If an import failed, the plugin never reaches its self-check: the probe
+  then says "the plugin failed to import" and prints the import errors from
+  the newest plugin log.
 - **2b.** The plugin's share of a pairing is two X25519 operations (its key
   pair and the shared secret) and three HKDF calls, so the estimate doubles
   the logged key agreement. The system Python line measures the same work
@@ -124,6 +130,8 @@ Fill in from the probe output. Section numbers match the probe's headings.
   line that holds any other character, so nothing of these lines is typed.
 - **5d "no".** If the reload line says it was then announced, the plugin has
   to ask avahi to reload after it writes its service file.
+- **5d "skipped: already announced".** A killed earlier run left the probe
+  service announced. Run `sudo avahi-daemon --reload`, then the probe again.
 - **5c yes, 5e no.** avahi announces on the Deck but the Mac does not see it:
   check the network (guest Wi-Fi, client isolation) before the plugin.
 
@@ -134,8 +142,12 @@ rm -rf hotbar-decky spike-2.txt
 ```
 
 The probe removes its own service file, also when it stops with an error. If
-it was killed, remove the file by hand:
+it was killed, remove the file by hand and let avahi drop it:
 
 ```bash
 sudo rm -f /etc/avahi/services/hotbar-probe.service
+```
+
+```bash
+sudo avahi-daemon --reload
 ```

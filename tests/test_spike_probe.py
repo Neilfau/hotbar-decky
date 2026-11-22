@@ -121,68 +121,93 @@ def test_parse_browse_keeps_resolved_entries_and_unescapes_names():
 
 
 class FakeAvahi:
-    """Answers avahi-browse and avahi-daemon --reload; the probe type appears once `visible_after` browses have run."""
+    """Answers avahi-browse and avahi-daemon --reload. With `picks_up`, it announces the probe file once it has
+    existed for `delay` browses; a reload announces exactly what is on disk, as avahi does."""
 
-    def __init__(self, services: Path, visible_after: int | None, reload_works: bool = True):
+    def __init__(self, services: Path, picks_up: bool = True, delay: int = 0, reload_works: bool = True,
+                 announced: bool = False):
         self.services = services
-        self.visible_after = visible_after
+        self.picks_up = picks_up
+        self.delay = delay
         self.reload_works = reload_works
-        self.probe_browses = 0
+        self.announced = announced
+        self.browses_with_file = 0
+        self.reloads = 0
         self.commands: list[list[str]] = []
-        self.file_seen = False
 
     def __call__(self, cmd, _timeout):
         self.commands.append(cmd)
-        if cmd[:2] == ["avahi-daemon", "--reload"]:
+        exists = (self.services / spike_probe.PROBE_FILE_NAME).is_file()
+        if cmd == ["avahi-daemon", "--reload"]:
+            self.reloads += 1
             if self.reload_works:
-                self.visible_after = self.probe_browses
+                self.announced = exists
             return ""
         if cmd[-1] == spike_probe.PROBE_TYPE:
-            self.file_seen |= (self.services / spike_probe.PROBE_FILE_NAME).is_file()
-            self.probe_browses += 1
-            visible = self.visible_after is not None and self.probe_browses > self.visible_after
-            return PROBE_LINE if visible else ""
+            if exists:
+                self.browses_with_file += 1
+            if self.picks_up:
+                self.announced = exists and self.browses_with_file > self.delay
+            return PROBE_LINE if self.announced else ""
         return BROWSE_LINES
 
 
 def test_pickup_test_sees_the_probe_file_without_a_reload_and_removes_it(deck):
-    avahi = FakeAvahi(deck.services, visible_after=2)
+    avahi = FakeAvahi(deck.services, delay=2)
     lines = spike_probe.pickup_test(deck.services, avahi, sleep=lambda _s: None)
     assert lines[0].startswith("pickup without restart: yes")
-    assert avahi.file_seen
-    assert ["avahi-daemon", "--reload"] not in avahi.commands
+    assert avahi.browses_with_file == 3
+    assert avahi.reloads == 0
     assert list(deck.services.iterdir()) == []
 
 
-def test_pickup_test_reloads_when_the_file_is_not_seen(deck):
-    avahi = FakeAvahi(deck.services, visible_after=None)
+def test_pickup_test_reloads_when_the_file_is_not_seen_and_withdraws_it_after(deck):
+    avahi = FakeAvahi(deck.services, picks_up=False)
     lines = spike_probe.pickup_test(deck.services, avahi, sleep=lambda _s: None)
     assert lines[0].startswith("pickup without restart: no")
     assert "has to ask avahi to reload" in lines[1]
     assert list(deck.services.iterdir()) == []
+    assert avahi.reloads == 2 and not avahi.announced
+
+
+def test_a_second_run_after_a_reload_does_not_report_a_false_pickup(deck):
+    avahi = FakeAvahi(deck.services, picks_up=False)
+    spike_probe.pickup_test(deck.services, avahi, sleep=lambda _s: None)
+    assert spike_probe.pickup_test(deck.services, avahi, sleep=lambda _s: None)[0].startswith(
+        "pickup without restart: no"
+    )
+
+
+def test_pickup_test_skips_when_the_probe_type_is_already_announced(deck):
+    avahi = FakeAvahi(deck.services, picks_up=False, announced=True)
+    lines = spike_probe.pickup_test(deck.services, avahi, sleep=lambda _s: None)
+    assert lines[0].startswith("pickup test skipped: _hotbarprobe._tcp is already announced")
+    assert avahi.browses_with_file == 0
 
 
 def test_pickup_test_reports_a_reload_that_does_not_help(deck):
-    avahi = FakeAvahi(deck.services, visible_after=None, reload_works=False)
+    avahi = FakeAvahi(deck.services, picks_up=False, reload_works=False)
     lines = spike_probe.pickup_test(deck.services, avahi, sleep=lambda _s: None)
     assert lines[1] == "after avahi-daemon --reload: still not announced"
 
 
 def test_pickup_test_skips_when_the_folder_is_not_writable(tmp_path):
-    lines = spike_probe.pickup_test(tmp_path / "missing", FakeAvahi(tmp_path, 0), sleep=lambda _s: None)
-    assert lines[0].startswith("pickup test skipped")
+    lines = spike_probe.pickup_test(tmp_path / "missing", FakeAvahi(tmp_path), sleep=lambda _s: None)
+    assert lines[0].startswith("pickup test skipped: cannot write")
 
 
 def test_discovery_resolves_locally_runs_pickup_and_prints_the_mac_commands(deck, monkeypatch):
     (deck.proc / "7").mkdir()
     (deck.proc / "7" / "comm").write_text("avahi-daemon\n")
     monkeypatch.setattr(spike_probe.shutil, "which", lambda _name: "/usr/bin/avahi-browse")
-    avahi = FakeAvahi(deck.services, visible_after=0)
+    avahi = FakeAvahi(deck.services)
     out = "\n".join(spike_probe.section_discovery(deck.services, deck.proc, avahi, sleep=lambda _s: None))
     assert "avahi-daemon running: yes" in out
     assert "_hotbar._tcp on this Deck: steamdeck at 192.168.1.20:40123" in out
     assert "pickup without restart: yes" in out
     assert "dns-sd -B _hotbar._tcp local." in out
+    assert 'dns-sd -L "steamdeck" _hotbar._tcp local.' in out
+    assert "dns-sd -G v4 steamdeck.local" in out
 
 
 def test_type_tests_send_ascii_and_symbols_and_refuse_accents_and_emoji_whole():
@@ -227,7 +252,8 @@ def test_main_prints_every_section_and_reads_the_plugin_log(deck, capsys):
         assert f"== {title} ==" in out
     assert "decky python: 3.11.9" in out
     assert "plugin effective uid: 0" in out
-    assert "plugin opened" in out and ": true" in out
+    assert f"plugin opened {deck.argv[deck.argv.index('--uinput') + 1]}: true" in out
+    assert "decky python loaded every module above: no (hmac, secrets, fcntl, ctypes, aiohttp)" in out
     assert "plugin created its virtual keyboard and pointer: yes" in out
     assert f"log with the self-check lines: {deck.homebrew / 'logs' / 'HotBar' / '2026-11-22.log'}" in out
 
@@ -248,3 +274,47 @@ def test_start_outcome_reads_the_last_start_up_line(tmp_path):
     assert spike_probe.start_outcome(log).startswith("yes")
     log.write_text("x other\n")
     assert spike_probe.start_outcome(log).startswith("unknown")
+
+
+def test_a_failed_import_is_reported_from_the_newest_log_without_self_check_lines(deck, capsys):
+    folder = deck.homebrew / "logs" / "HotBar"
+    folder.mkdir(parents=True)
+    (folder / "start.log").write_text("ERROR Failed to start HotBar!\nModuleNotFoundError: No module named 'secrets'\n")
+    assert spike_probe.main([*deck.argv, "--no-type"], runner=FakeAvahi(deck.services)) == 0
+    out = capsys.readouterr().out
+    assert "decky python: the plugin failed to import" in out
+    assert "  ModuleNotFoundError: No module named 'secrets'" in out
+    assert f"newest plugin log, without self-check lines: {folder / 'start.log'}" in out
+
+
+def test_module_section_says_yes_only_when_every_check_is_ok_and_ignores_self_check_failures(tmp_path):
+    ok = {name: "ok" for name in spike_probe.DECKY_MODULE_CHECKS}
+    assert "decky python loaded every module above: yes" in spike_probe.section_modules(["os"], ok, None)
+    log = tmp_path / "plugin.log"
+    log.write_text("INFO selfcheck ctypes: failed (ModuleNotFoundError)\n")
+    lines = spike_probe.section_modules(["os"], {**ok, "ctypes": "failed (ModuleNotFoundError)"}, log)
+    assert "decky python loaded every module above: no (ctypes)" in lines
+    assert not any(line.startswith("import errors") for line in lines)
+
+
+def test_a_write_failure_partway_keeps_the_lines_already_sent():
+    injector, keyboard = fake_injector()
+    tests = (("first", "abc"), ("second", "def"))
+
+    async def run():
+        lines = []
+        original = injector.type_text
+
+        async def fail_second(text, open_, submit):
+            if text == "def":
+                keyboard.fail = True
+            await original(text, open_, submit)
+
+        injector.type_text = fail_second
+        lines = await spike_probe.type_tests(injector, tests)
+        return lines
+
+    lines = asyncio.run(run())
+    assert lines[0] == "first: sent abc"
+    assert lines[1].startswith("second: failed")
+    assert lines[-1] == "expected on screen: abc"
