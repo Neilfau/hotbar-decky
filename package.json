@@ -1,11 +1,12 @@
 {
   "name": "hotbar-decky",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "HotBar plugin for Decky Loader",
   "type": "module",
   "scripts": {
     "build": "rollup -c",
-    "watch": "rollup -c -w"
+    "watch": "rollup -c -w",
+    "package": "rollup -c && python3 tools/package.py"
   },
   "repository": {
     "type": "git",

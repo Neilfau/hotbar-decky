@@ -32,6 +32,11 @@ jobs:
           pnpm run build
           test -f dist/index.js
 
+      - name: Package plugin ZIP
+        run: |
+          python3 tools/package.py
+          unzip -l out/HotBar.zip
+
       - uses: astral-sh/setup-uv@v6
 
       - name: Run tests
