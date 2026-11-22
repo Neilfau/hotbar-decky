@@ -1,11 +1,11 @@
 {
   "name": "HotBar",
   "author": "Neil Faulkner",
-  "flags": ["debug", "_root"],
+  "flags": ["root"],
   "api_version": 1,
   "publish": {
-    "tags": [],
+    "tags": ["root", "input", "keyboard"],
     "description": "Use a phone as a keyboard, shortcut pad and pointer for games. Pairs with the HotBar app over the local network.",
-    "image": "https://opengraph.githubassets.com/1/Neilfau/hotbar-decky"
+    "image": "https://raw.githubusercontent.com/Neilfau/hotbar-decky/dev/assets/store-image.png"
   }
 }
