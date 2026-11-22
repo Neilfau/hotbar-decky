@@ -78,6 +78,11 @@ def gated_sleep():
     return sleep
 
 
+def gated_hold(stop, _seconds):
+    """A key hold that never finishes on its own, so a press stays in flight until it is stopped."""
+    stop.wait()
+
+
 async def until(condition, timeout=3.0):
     deadline = asyncio.get_running_loop().time() + timeout
     while not condition():
@@ -114,7 +119,7 @@ class Rig:
 
 
 @contextlib.asynccontextmanager
-async def make_rig(tmp_path, *, sleep=instant_sleep, store_port=None, start=True, **server_kwargs):
+async def make_rig(tmp_path, *, sleep=instant_sleep, hold=None, store_port=None, start=True, **server_kwargs):
     rig = Rig()
     rig.clock = Clock()
     rig.path = tmp_path / "devices.json"
@@ -122,7 +127,7 @@ async def make_rig(tmp_path, *, sleep=instant_sleep, store_port=None, start=True
     if store_port is not None:
         rig.store.set_port(store_port)
     rig.kb, rig.pointer = FakeDevice(), FakeDevice()
-    rig.injector = Injector(rig.kb, rig.pointer, sleep)
+    rig.injector = Injector(rig.kb, rig.pointer, sleep, *([hold] if hold else []))
     rig.records = []
     rig.changes = 0
     rig.snapshots = []
@@ -820,7 +825,7 @@ async def test_button_of_an_evicted_sender_is_released(tmp_path, monkeypatch):
 
 @run
 async def test_stream_closed_during_a_long_type_leaves_no_key_down(tmp_path):
-    async with make_rig(tmp_path, sleep=gated_sleep()) as rig:
+    async with make_rig(tmp_path, sleep=gated_sleep(), hold=gated_hold) as rig:
         phone = await StreamPhone.connect(rig, await pair(rig))
         await phone.send({"type": "type", "text": "ab"})
         await until(lambda: rig.kb.events == [down(KEY_A), SYN])
@@ -832,7 +837,7 @@ async def test_stream_closed_during_a_long_type_leaves_no_key_down(tmp_path):
 
 @run
 async def test_revoking_a_device_cancels_its_http_action_in_flight(tmp_path):
-    async with make_rig(tmp_path, sleep=gated_sleep()) as rig:
+    async with make_rig(tmp_path, sleep=gated_sleep(), hold=gated_hold) as rig:
         paired = await pair(rig)
         request = asyncio.create_task(HttpPhone(rig, paired).ask({"type": "type", "text": "a"}))
         await until(lambda: rig.kb.events == [down(KEY_A), SYN])
@@ -844,7 +849,7 @@ async def test_revoking_a_device_cancels_its_http_action_in_flight(tmp_path):
 
 @run
 async def test_full_queue_closes_the_socket(tmp_path):
-    async with make_rig(tmp_path, sleep=gated_sleep()) as rig:
+    async with make_rig(tmp_path, sleep=gated_sleep(), hold=gated_hold) as rig:
         phone = await StreamPhone.connect(rig, await pair(rig))
         await phone.send({"type": "type", "text": "a"})
         await until(lambda: rig.kb.events == [down(KEY_A), SYN])
