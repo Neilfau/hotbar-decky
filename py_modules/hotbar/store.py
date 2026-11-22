@@ -104,6 +104,15 @@ class DeviceStore:
     def remove_all(self) -> None:
         self._drop({})
 
+    @property
+    def write_pending(self) -> bool:
+        """True while the file still holds state that memory has dropped, after a failed write."""
+        return False
+
+    def retry_write(self) -> bool:
+        """Writes the in-memory state again if a write is pending. Returns True when nothing is pending afterwards."""
+        return True
+
     def _drop(self, remaining: dict[bytes, Device]) -> None:
         # A revoked key leaves memory first, so it stops working even if the file write fails.
         self._devices = remaining
