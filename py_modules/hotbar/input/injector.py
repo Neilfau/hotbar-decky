@@ -219,11 +219,20 @@ class Injector:
             # End the hold early and wait for the worker, which releases the keys, so nothing is
             # written after this coroutine has gone.
             stop.set()
-            with suppress(Exception):
-                await work
+            while True:
+                try:
+                    await asyncio.shield(work)
+                except asyncio.CancelledError:
+                    if not work.done():
+                        continue  # cancelled again: keep waiting until the worker has let go
+                except Exception:
+                    pass
+                break
             raise
 
     def _combo_blocking(self, code: int, mod_codes: Sequence[int], hold: float, stop: threading.Event) -> None:
+        if stop.is_set():
+            return  # cancelled while queued for a thread: write nothing
         try:
             if mod_codes:
                 self._keys_down(mod_codes)
