@@ -245,3 +245,7 @@ The plugin removes the file when it stops and when it is uninstalled.
 ## Licence
 
 BSD-3-Clause. See [LICENSE](LICENSE).
+
+The panel's keyboard icon is from [Font Awesome](https://fontawesome.com) by
+Fonticons, Inc., used through [react-icons](https://react-icons.github.io/react-icons/)
+under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
