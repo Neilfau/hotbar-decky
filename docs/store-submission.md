@@ -16,18 +16,25 @@ README, `plugin.json` and `package.json`, the database's
 
 ### Generative AI policy
 
-The `submitting-plugins` wiki page says the store does not accept plugins
-that use LLM-written code. The pull request template has a box that reads
+The `submitting-plugins` wiki page says the store does not accept any plugin
+that uses LLM-based code. The pull request template is looser: its box reads
 "Generative AI was NOT used to write a majority of the code I am submitting",
-and warns that pull requests that do not follow the template may be denied for
-suspected AI use. Only tick that box if it is true for this repository. If it
-cannot be ticked, the store is not open to this plugin under the current
-rules, and the ZIP install from a GitHub release (see the README) is the way
-to distribute it.
+and it warns that pull requests that do not follow the template may be denied
+for suspected AI use. The wiki rule is the stricter one, and reviewers can
+apply it.
+
+Every code commit in this repository's public history carries a
+`Co-Authored-By: Claude` trailer, so reviewers can see that an AI model
+co-wrote the code. Under the wiki rule as written, the store is not open to
+this plugin. Whether to submit anyway, for example after asking the Loader
+Team, is the maintainer's decision. The ZIP install from a GitHub release
+(see the README) works without the store.
 
 ### Checklist
 
-- [ ] The generative AI box above can be ticked truthfully.
+- [ ] The plugin meets the wiki's rule of no LLM-based code, or the Loader
+      Team has said it can be submitted. The template's "majority" box alone
+      is not enough.
 - [ ] HotBar works on a Steam Deck in Game Mode on SteamOS Stable or Beta:
       pairing, typing, shortcuts, pointer, sleep and wake, restart.
 - [ ] `package.json` `version` is bumped for this submission (0.1.0 for the
@@ -43,10 +50,13 @@ to distribute it.
       redistributes Font Awesome Free icons (CC BY 4.0). Decide whether that
       needs a credit in the README.
 - [ ] No unused `backend/`, `assets/` or `defaults/` folders. `assets/` holds
-      the store image that `plugin.json` points to, which the review rules
-      allow.
+      the store image that `plugin.json` points to and the icon the README
+      shows. Review step 7 only names `icon.png` as a reason to keep
+      `assets/`, so a reviewer may ask about it.
 - [ ] The store image URL in `plugin.json` loads:
       `https://raw.githubusercontent.com/Neilfau/hotbar-decky/dev/assets/store-image.png`.
+      It follows the `dev` branch, so a later change to the image there
+      changes the store card.
 - [ ] Optional but it raises priority: test two other open plugin pull
       requests and leave a report on each.
 - [ ] Search the store for plugins that already turn a phone into a keyboard
@@ -138,15 +148,15 @@ games on the Steam Deck. It is the Deck side of the HotBar phone app.
 - The Quick Access panel shows a QR code. The app scans it and the two agree
   a key (X25519) that only they hold. Each paired device has its own key and
   can be removed alone in the panel.
-- The plugin listens on the local network only. Every message from the app is
-  encrypted and authenticated with ChaCha20-Poly1305, and replays are
+- The plugin listens on the local network only. Every message after pairing
+  is encrypted and authenticated with ChaCha20-Poly1305, and replays are
   rejected. Unauthenticated connections are dropped.
 - Each command becomes one key press, one line of text or one pointer event,
   through a virtual keyboard and mouse on `/dev/uinput`. This is why the
   plugin needs the `root` flag. It reads no game files.
 - The plugin writes an avahi service file so the app can find the Deck again
   when its address changes, and removes it when it stops or is uninstalled.
-- Typed text is never logged. Logs hold message types and errors only.
+- Logs hold no typed text, key codes or keys.
 
 The backend is Python on the standard library plus the `aiohttp` that Decky
 bundles. The crypto is pure Python because Decky's Python cannot load native

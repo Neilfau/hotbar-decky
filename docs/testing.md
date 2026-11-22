@@ -32,10 +32,10 @@ Do these in Game Mode. Note anything that fails or looks wrong.
 
 1. **Panel opens.** Open HotBar in the Decky tab. The status line says how
    many devices are paired and does not say "Not running".
-2. **Pairing.** Choose Pair a device. A QR code appears. Scan it with the
-   HotBar app. The phone appears in the panel's device list within a few
+2. **Pairing.** With no device paired, a QR code shows as soon as the panel
+   opens. Scan it with the HotBar app. The phone appears in the panel's device list within a few
    seconds, and shows Connected.
-3. **QR expiry.** Choose Pair a device again and wait two minutes without
+3. **QR expiry.** Choose Pair another device and wait two minutes without
    scanning. The panel says the QR code expired.
 4. **Typing.** Start a game and open its text chat, or any text field. Send a
    line from the app. It appears once, with the right characters. Try capital

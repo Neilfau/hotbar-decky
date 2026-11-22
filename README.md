@@ -1,5 +1,7 @@
 # hotbar-decky
 
+<img src="assets/icon.png" alt="HotBar icon" width="96">
+
 HotBar is a plugin for [Decky Loader](https://github.com/SteamDeckHomebrew/decky-loader),
 the plugin loader for SteamOS on the Steam Deck. Together with the HotBar app
 it turns a phone or tablet into a keyboard, shortcut pad and pointer for games.
@@ -15,7 +17,7 @@ it turns a phone or tablet into a keyboard, shortcut pad and pointer for games.
   `/dev/uinput`: one key press, one line of text, or one pointer event.
 
 Everything else, such as key maps and profiles, lives in the app. The plugin
-does nothing until a device is paired.
+sends no input until a device is paired.
 
 It is based on the official
 [Decky plugin template](https://github.com/SteamDeckHomebrew/decky-plugin-template).
@@ -49,7 +51,9 @@ You can also copy a ZIP to the Deck and choose Install Plugin from ZIP File.
 
 1. Put the phone and the Deck on the same local network.
 2. On the Deck, open the Quick Access menu, then Decky, then HotBar.
-3. Choose Pair a device. A QR code appears for two minutes.
+3. With no device paired, a QR code shows as soon as the panel opens. If a
+   device is already paired, choose Pair another device. The code is valid
+   for two minutes.
 4. Scan the code with the HotBar app.
 5. The device appears in the panel's list. Pair more devices the same way.
 

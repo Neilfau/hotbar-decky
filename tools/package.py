@@ -60,7 +60,7 @@ def build(root: Path, out_dir: Path) -> Path:
             info.compress_type = zipfile.ZIP_DEFLATED
             info.external_attr = (0o100000 | mode) << 16
             info.create_system = 3
-            zf.writestr(info, src.read_bytes())
+            zf.writestr(info, src.read_bytes(), compresslevel=9)
     return target
 
 

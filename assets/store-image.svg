@@ -1,14 +1,14 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 800" width="1280" height="800">
   <!-- HotBar store card (16:10, the store crops to 320x200): the icon's bar of key slots, centred. Original artwork, BSD-3-Clause with this repository. -->
-  <rect width="1280" height="800" fill="#1A1512"/>
+  <rect width="1280" height="800" fill="#14171C"/>
   <g transform="translate(230.4 -9.6) scale(1.6)">
-    <rect x="44" y="180" width="424" height="152" rx="32" fill="#2A221C" stroke="#8A7A5C" stroke-width="6"/>
-    <g stroke="#FFD100" stroke-width="10" fill="none">
-      <rect x="70" y="206" width="80" height="100" rx="16" fill="#FFD100"/>
+    <rect x="44" y="180" width="424" height="152" rx="32" fill="#1E232B" stroke="#3A424E" stroke-width="6"/>
+    <g stroke="#F2B632" stroke-width="10" fill="none">
+      <rect x="70" y="206" width="80" height="100" rx="16" fill="#F2B632"/>
       <rect x="168" y="206" width="80" height="100" rx="16"/>
       <rect x="266" y="206" width="80" height="100" rx="16"/>
       <rect x="364" y="206" width="80" height="100" rx="16"/>
     </g>
-    <rect x="94" y="284" width="32" height="8" rx="4" fill="#1A1512"/>
+    <rect x="94" y="284" width="32" height="8" rx="4" fill="#14171C"/>
   </g>
 </svg>
