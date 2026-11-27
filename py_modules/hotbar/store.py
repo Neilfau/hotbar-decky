@@ -1,8 +1,10 @@
-# Keeps the plugin id and the paired devices in an owner-only JSON file.
+# Keeps the plugin id and the paired devices in an owner-only JSON file inside a folder only the plugin's user can open,
+# and moves a file an earlier version left in the desktop user's settings folder into it.
 import contextlib
 import errno
 import json
 import os
+import re
 import stat
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -56,20 +58,138 @@ def _parse(raw: bytes) -> tuple[bytes, int | None, dict[bytes, Device]]:
     return plugin_id, port, devices
 
 
+def _fsync_dir(directory: Path) -> None:
+    dir_fd = os.open(directory, os.O_RDONLY)
+    try:
+        os.fsync(dir_fd)
+    finally:
+        os.close(dir_fd)
+
+
+def _read_regular_file(path: Path, *, tighten: bool) -> bytes:
+    """Reads a file through one descriptor opened without following a symlink.
+    A symlink or a path that is not a regular file is unreadable. With `tighten`, a file with wider
+    permissions than 0600 is set back to 0600."""
+    flags = os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK | getattr(os, "O_CLOEXEC", 0)
+    try:
+        fd = os.open(path, flags)
+    except OSError as exc:
+        if exc.errno == errno.ELOOP:
+            raise OSError(errno.ELOOP, "symlink") from None
+        raise
+    try:
+        info = os.fstat(fd)
+        if not stat.S_ISREG(info.st_mode):
+            raise OSError(errno.EINVAL, "not a regular file")
+        if tighten and stat.S_IMODE(info.st_mode) & 0o177:
+            os.fchmod(fd, 0o600)
+        with os.fdopen(fd, "rb", closefd=False) as handle:
+            return handle.read()
+    finally:
+        os.close(fd)
+
+
+def _discard(path: Path) -> None:
+    """Removes a file in the desktop user's folder. The copy that matters is already in the state folder,
+    so a file that cannot be removed is left for the next start."""
+    with contextlib.suppress(OSError):
+        os.unlink(path)
+        _fsync_dir(path.parent)
+
+
 class DeviceStore:
-    def __init__(self, path: Path, random: Callable[[int], bytes] = os.urandom):
+    def __init__(self, path: Path, random: Callable[[int], bytes] = os.urandom, legacy_path: Path | None = None):
+        """`path` is the device file, in a folder that must belong to this process's user. `legacy_path` is where
+        an earlier version kept it, in a folder the desktop user can write: a file there is moved to `path`."""
         self._path = Path(path)
         self._random = random
         self.recovered_from_corruption = False
         self._write_pending = False
-        try:
-            self._path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
-        except OSError as exc:
-            raise StoreError("cannot create the settings directory") from exc
+        self._secure_directory()
+        legacy = self._legacy_elsewhere(legacy_path)
         if os.path.lexists(self._path):
             self._load()
+            if legacy is not None:
+                _discard(legacy)  # a crash after the copy leaves both files; the new one is the one in use
+        elif legacy is not None and self._legacy_present(legacy):
+            self._migrate(legacy)
         else:
             self._start_fresh()
+        if legacy is not None:
+            self._move_legacy_corrupt_files(legacy)
+
+    def _secure_directory(self) -> None:
+        """Creates the folder with mode 0700 and refuses one that is a symlink or belongs to another user.
+        The folder is opened once without following a symlink, so the checks and the chmod act on the same folder."""
+        directory = self._path.parent
+        try:
+            directory.mkdir(mode=0o700, parents=True, exist_ok=True)
+            fd = os.open(directory, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | getattr(os, "O_CLOEXEC", 0))
+            try:
+                info = os.fstat(fd)
+                if info.st_uid != os.geteuid():
+                    raise StoreError("the state directory belongs to another user")
+                if stat.S_IMODE(info.st_mode) & 0o077:
+                    os.fchmod(fd, 0o700)
+            finally:
+                os.close(fd)
+        except OSError as exc:
+            raise StoreError("cannot use the state directory") from exc
+
+    def _legacy_elsewhere(self, legacy_path: Path | None) -> Path | None:
+        """The legacy path, unless its folder is the state folder (a symlinked settings folder must not make
+        the live file look like a legacy one)."""
+        if legacy_path is None:
+            return None
+        legacy = Path(legacy_path)
+        with contextlib.suppress(OSError):
+            if os.path.samefile(legacy.parent, self._path.parent):
+                return None
+        return legacy
+
+    @staticmethod
+    def _legacy_present(legacy: Path) -> bool:
+        try:
+            os.lstat(legacy)
+        except (FileNotFoundError, NotADirectoryError):
+            return False
+        except OSError as exc:
+            raise StoreError("cannot read the legacy device file") from exc
+        return True
+
+    def _migrate(self, legacy: Path) -> None:
+        """Copies the legacy file into the state folder, then removes it. The legacy file is never renamed: a
+        renamed file would still belong to the desktop user, who could keep it open or linked."""
+        try:
+            raw = _read_regular_file(legacy, tighten=False)
+        except OSError as exc:
+            raise StoreError("cannot read the legacy device file") from exc
+        try:
+            self.plugin_id, self._port, self._devices = _parse(raw)
+        except ValueError:
+            self._copy_aside(raw)
+            self.recovered_from_corruption = True
+            _discard(legacy)
+            self._start_fresh()
+            return
+        self._write(self.plugin_id, self._port, self._devices)
+        _discard(legacy)
+
+    def _move_legacy_corrupt_files(self, legacy: Path) -> None:
+        """Copies the `.corrupt` files an earlier version set aside in the desktop user's folder into the state
+        folder and removes them. One that cannot be read or copied stays where it is."""
+        pattern = re.compile(re.escape(legacy.name) + r"\.corrupt(\.\d+)?")
+        try:
+            names = sorted(name for name in os.listdir(legacy.parent) if pattern.fullmatch(name))
+        except OSError:
+            return
+        for name in names:
+            entry = legacy.parent / name
+            try:
+                self._copy_aside(_read_regular_file(entry, tighten=False))
+            except (OSError, StoreError):
+                continue
+            _discard(entry)
 
     @property
     def port(self) -> int | None:
@@ -135,7 +255,7 @@ class DeviceStore:
 
     def _load(self) -> None:
         try:
-            raw = self._read_regular_file()
+            raw = _read_regular_file(self._path, tighten=True)
         except OSError as exc:
             raise StoreError("cannot read the device file") from exc
         try:
@@ -145,37 +265,22 @@ class DeviceStore:
             self.recovered_from_corruption = True
             self._start_fresh()
 
-    def _read_regular_file(self) -> bytes:
-        """Reads the device file through one descriptor opened without following a symlink.
-        A symlink or a path that is not a regular file is unreadable."""
-        flags = os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK | getattr(os, "O_CLOEXEC", 0)
-        try:
-            fd = os.open(self._path, flags)
-        except OSError as exc:
-            if exc.errno == errno.ELOOP:
-                raise OSError(errno.ELOOP, "symlink") from None
-            raise
-        try:
-            info = os.fstat(fd)
-            if not stat.S_ISREG(info.st_mode):
-                raise OSError(errno.EINVAL, "not a regular file")
-            if stat.S_IMODE(info.st_mode) & 0o177:
-                os.fchmod(fd, 0o600)
-            with os.fdopen(fd, "rb", closefd=False) as handle:
-                return handle.read()
-        finally:
-            os.close(fd)
-
-    def _set_aside(self) -> None:
+    def _free_aside_name(self) -> Path:
         target = self._path.with_name(self._path.name + ".corrupt")
         n = 0
-        while target.exists():
+        while os.path.lexists(target):
             n += 1
             target = self._path.with_name(f"{self._path.name}.corrupt.{n}")
+        return target
+
+    def _set_aside(self) -> None:
         try:
-            self._path.rename(target)
+            self._path.rename(self._free_aside_name())
         except OSError as exc:
             raise StoreError("cannot move the corrupt device file aside") from exc
+
+    def _copy_aside(self, raw: bytes) -> None:
+        self._write_file(self._free_aside_name(), raw)
 
     def _write(self, plugin_id: bytes, port: int | None, devices: dict[bytes, Device]) -> None:
         doc = {
@@ -191,8 +296,12 @@ class DeviceStore:
                 for d in devices.values()
             ],
         }
-        payload = json.dumps(doc, indent=2, sort_keys=True).encode("ascii")
-        tmp = self._path.with_name(f".{self._path.name}.{self._random(8).hex()}.tmp")
+        self._write_file(self._path, json.dumps(doc, indent=2, sort_keys=True).encode("ascii"))
+        self._write_pending = False
+
+    def _write_file(self, target: Path, payload: bytes) -> None:
+        """Writes `payload` to `target` through an owner-only temporary file that is synced before it replaces the target."""
+        tmp = target.with_name(f".{target.name}.{self._random(8).hex()}.tmp")
         try:
             fd = os.open(tmp, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
             try:
@@ -200,16 +309,11 @@ class DeviceStore:
                     handle.write(payload)
                     handle.flush()
                     os.fsync(handle.fileno())
-                os.replace(tmp, self._path)
+                os.replace(tmp, target)
             except BaseException:
                 with contextlib.suppress(OSError):
                     os.unlink(tmp)
                 raise
-            dir_fd = os.open(self._path.parent, os.O_RDONLY)
-            try:
-                os.fsync(dir_fd)
-            finally:
-                os.close(dir_fd)
+            _fsync_dir(target.parent)
         except OSError as exc:
             raise StoreError("cannot write the device file") from exc
-        self._write_pending = False

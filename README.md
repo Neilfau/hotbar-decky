@@ -130,8 +130,11 @@ command-line tool, not in the panel or on the network.
   IPv4 addresses only.
 - Every paired device has its own key and can be removed alone in the panel.
   Removal takes effect on that device's next message.
-- Keys are stored in `devices.json` in the plugin's settings directory, with
-  mode 0600.
+- Keys are stored in `/home/.hotbar/devices.json`. The folder belongs to root
+  (mode 0700) and sits outside the folders Decky manages, so the desktop user
+  cannot read it. A `devices.json` that an earlier version left in the plugin's
+  settings directory is moved there on first start. Keys made before this
+  version were readable by the desktop user, so pair those phones again.
 - Traffic is plain HTTP and WebSocket. Each message is sealed with
   ChaCha20-Poly1305 under a key derived for that message, and replays are
   rejected.
