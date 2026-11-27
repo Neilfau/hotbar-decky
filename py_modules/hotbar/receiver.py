@@ -103,10 +103,19 @@ class Receiver:
         for oldest in from_address[: max(0, len(from_address) - (c.CHALLENGE_MAX_PER_ADDRESS - 1))]:
             del self.challenges[oldest]
         while len(self.challenges) >= c.CHALLENGE_MAX_TOTAL:
-            del self.challenges[next(iter(self.challenges))]
+            del self.challenges[self._oldest_of_busiest_address()]
         challenge = self._random(c.CHALLENGE_LEN)
         self.challenges[challenge] = Challenge(now_ms + c.CHALLENGE_TTL_MS, address)
         return challenge
+
+    def _oldest_of_busiest_address(self) -> bytes:
+        """The oldest challenge of the address holding the most, so a flood from a few addresses costs them
+        their own challenges. On a tie it is the address whose oldest challenge was issued first."""
+        counts: dict[str, int] = {}
+        for challenge in self.challenges.values():
+            counts[challenge.address] = counts.get(challenge.address, 0) + 1
+        busiest = max(counts, key=counts.__getitem__)  # max keeps the first maximum, and `counts` is in issue order
+        return next(key for key, challenge in self.challenges.items() if challenge.address == busiest)
 
     def drop_sender(self, device_id: bytes, sender_id: bytes) -> None:
         self.senders.pop((device_id, sender_id), None)
