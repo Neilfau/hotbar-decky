@@ -1,6 +1,7 @@
 # Tests for the device key file: permissions, durability, failure handling and recovery.
 import json
 import os
+import stat
 
 import pytest
 
@@ -334,3 +335,202 @@ def test_an_unreadable_path_is_a_store_error_not_a_reset(tmp_path):
     with pytest.raises(StoreError):
         DeviceStore(folder)
     assert folder.is_dir()
+
+
+# the state directory
+
+def test_the_state_directory_is_created_owner_only(path):
+    DeviceStore(path)
+    assert mode(path.parent) == 0o700
+
+
+def test_a_directory_with_a_wider_mode_is_set_back_to_owner_only(path):
+    path.parent.mkdir()
+    path.parent.chmod(0o755)
+    store = DeviceStore(path)
+    assert mode(path.parent) == 0o700
+    assert DeviceStore(path).plugin_id == store.plugin_id
+
+
+def test_a_directory_with_a_special_mode_bit_is_set_back_to_owner_only(path):
+    path.parent.mkdir()
+    path.parent.chmod(0o1700)
+    DeviceStore(path)
+    assert stat.S_IMODE(path.parent.stat().st_mode) == 0o700
+
+
+def test_a_directory_owned_by_someone_else_is_refused_and_left_alone(path, monkeypatch):
+    path.parent.mkdir()
+    path.parent.chmod(0o755)
+    monkeypatch.setattr(os, "geteuid", lambda: os.getuid() + 1)
+    with pytest.raises(StoreError):
+        DeviceStore(path)
+    assert mode(path.parent) == 0o755
+    assert os.listdir(path.parent) == []
+
+
+def test_a_symlinked_directory_is_refused_and_its_target_is_untouched(path, tmp_path):
+    target = tmp_path / "elsewhere"
+    target.mkdir()
+    target.chmod(0o755)
+    path.parent.symlink_to(target)
+    with pytest.raises(StoreError):
+        DeviceStore(path)
+    assert mode(target) == 0o755
+    assert os.listdir(target) == []
+
+
+def test_a_directory_that_is_a_file_is_refused(path):
+    path.parent.write_text("x")
+    with pytest.raises(StoreError):
+        DeviceStore(path)
+
+
+# moving a file out of the desktop user's settings directory
+
+@pytest.fixture
+def legacy(tmp_path):
+    folder = tmp_path / "decky-settings"
+    folder.mkdir()
+    return folder / "devices.json"
+
+
+def write_legacy(legacy, content: bytes, perm: int = 0o644):
+    legacy.write_bytes(content)
+    legacy.chmod(perm)
+
+
+def test_a_legacy_file_is_moved_with_its_plugin_id_and_keys(path, legacy):
+    write_legacy(legacy, json.dumps(valid_doc(port=1234)).encode())
+    store = DeviceStore(path, legacy_path=legacy)
+    assert store.recovered_from_corruption is False
+    assert store.plugin_id == bytes([0xAA]) * 16 and store.port == 1234
+    assert store.devices() == [Device(bytes([0x11]) * 16, bytes([0x22]) * 32, "P", 5)]
+    assert not os.path.lexists(legacy)
+    assert mode(path) == 0o600
+    reloaded = DeviceStore(path, legacy_path=legacy)
+    assert (reloaded.plugin_id, reloaded.port, reloaded.devices()) == (store.plugin_id, 1234, store.devices())
+    assert os.listdir(path.parent) == ["devices.json"]
+
+
+def test_a_crash_between_the_write_and_the_unlink_leaves_both_files_and_the_new_one_wins(path, legacy, monkeypatch):
+    write_legacy(legacy, json.dumps(valid_doc()).encode())
+    with monkeypatch.context() as m:
+        m.setattr(os, "unlink", failing_replace)  # the legacy file cannot be removed
+        first = DeviceStore(path, legacy_path=legacy)
+    assert first.plugin_id == bytes([0xAA]) * 16
+    assert legacy.exists() and path.exists()
+    # The new file is changed after the copy, so the legacy one is stale.
+    first.add(device(1))
+    write_legacy(legacy, json.dumps(valid_doc(pluginId="bb" * 16)).encode())
+    second = DeviceStore(path, legacy_path=legacy)
+    assert second.plugin_id == bytes([0xAA]) * 16
+    assert device(1) in second.devices()
+    assert not os.path.lexists(legacy)
+
+
+@pytest.mark.parametrize("kind", ["symlink", "fifo", "directory"])
+def test_an_unreadable_legacy_file_is_a_store_error_and_stays_in_place(path, legacy, tmp_path, kind):
+    if kind == "symlink":
+        target = tmp_path / "target.json"
+        target.write_text(json.dumps(valid_doc()))
+        legacy.symlink_to(target)
+    elif kind == "fifo":
+        os.mkfifo(legacy)
+    else:
+        legacy.mkdir()
+    with pytest.raises(StoreError):
+        DeviceStore(path, legacy_path=legacy)
+    assert os.path.lexists(legacy)
+    assert not os.path.lexists(path)
+    assert os.listdir(path.parent) == []
+
+
+def test_a_failed_write_during_the_move_keeps_the_legacy_file(path, legacy, monkeypatch):
+    content = json.dumps(valid_doc()).encode()
+    write_legacy(legacy, content)
+    monkeypatch.setattr(os, "replace", failing_replace)
+    with pytest.raises(StoreError):
+        DeviceStore(path, legacy_path=legacy)
+    assert legacy.read_bytes() == content
+    assert os.listdir(path.parent) == []
+
+
+@pytest.mark.parametrize("content", [b"{not json", b"", json.dumps(valid_doc(port=0)).encode()])
+def test_a_corrupt_legacy_file_is_copied_into_the_state_directory_and_removed(path, legacy, content):
+    write_legacy(legacy, content)
+    store = DeviceStore(path, legacy_path=legacy)
+    assert store.recovered_from_corruption is True
+    assert store.devices() == [] and store.port is None
+    aside = path.with_name("devices.json.corrupt")
+    assert aside.read_bytes() == content and mode(aside) == 0o600
+    assert not os.path.lexists(legacy)
+    assert sorted(os.listdir(path.parent)) == ["devices.json", "devices.json.corrupt"]
+    assert DeviceStore(path, legacy_path=legacy).recovered_from_corruption is False
+
+
+@pytest.mark.parametrize("content", [json.dumps(valid_doc()).encode(), b"{not json"], ids=["valid", "corrupt"])
+def test_a_legacy_file_is_copied_not_renamed(path, legacy, content):
+    write_legacy(legacy, content)
+    link = legacy.with_name("held-open")
+    os.link(legacy, link)  # stands in for a descriptor or a link the desktop user kept
+    DeviceStore(path, legacy_path=legacy)
+    assert not os.path.lexists(legacy)
+    assert link.read_bytes() == content
+    for moved in (path, path.with_name("devices.json.corrupt")):
+        if moved.exists():
+            assert not os.path.samefile(moved, link)
+
+
+def test_legacy_corrupt_files_are_copied_into_the_state_directory_and_removed(path, legacy):
+    path.parent.mkdir()
+    write_legacy(path.with_name("devices.json.corrupt"), b"already here", 0o600)
+    write_legacy(legacy.with_name("devices.json.corrupt"), b"old one")
+    write_legacy(legacy.with_name("devices.json.corrupt.1"), b"old two")
+    (legacy.parent / "other.json").write_bytes(b"not ours")
+    DeviceStore(path, legacy_path=legacy)
+    kept = {name: (path.parent / name).read_bytes() for name in os.listdir(path.parent) if "corrupt" in name}
+    assert sorted(kept.values()) == [b"already here", b"old one", b"old two"]
+    assert all(mode(path.parent / name) == 0o600 for name in kept)
+    assert os.listdir(legacy.parent) == ["other.json"]
+
+
+def test_legacy_corrupt_files_move_even_when_the_new_file_already_exists(path, legacy):
+    DeviceStore(path)
+    write_legacy(legacy.with_name("devices.json.corrupt.3"), b"late")
+    DeviceStore(path, legacy_path=legacy)
+    assert path.with_name("devices.json.corrupt").read_bytes() == b"late"
+    assert os.listdir(legacy.parent) == []
+
+
+def test_an_unreadable_legacy_corrupt_file_does_not_stop_the_start(path, legacy, tmp_path):
+    target = tmp_path / "target"
+    target.write_bytes(b"secret")
+    legacy.with_name("devices.json.corrupt").symlink_to(target)
+    store = DeviceStore(path, legacy_path=legacy)
+    assert store.devices() == []
+    assert legacy.with_name("devices.json.corrupt").is_symlink() and target.read_bytes() == b"secret"
+
+
+@pytest.mark.parametrize("folder", ["missing", "a file"])
+def test_without_a_legacy_file_a_fresh_store_starts(path, tmp_path, folder):
+    settings = tmp_path / "decky-settings-2"
+    if folder == "a file":
+        settings.write_text("x")
+    store = DeviceStore(path, legacy_path=settings / "devices.json")
+    assert store.recovered_from_corruption is False and store.devices() == []
+    assert os.listdir(path.parent) == ["devices.json"]
+
+
+@pytest.mark.parametrize("how", ["same path", "symlinked folder"])
+def test_a_legacy_folder_that_is_the_state_folder_leaves_the_live_file_alone(path, tmp_path, how):
+    first = DeviceStore(path)
+    first.add(device(1))
+    if how == "same path":
+        legacy_path = path
+    else:
+        (tmp_path / "link").symlink_to(path.parent)
+        legacy_path = tmp_path / "link" / "devices.json"
+    store = DeviceStore(path, legacy_path=legacy_path)
+    assert path.exists() and store.devices() == [device(1)]
+    assert DeviceStore(path).plugin_id == first.plugin_id

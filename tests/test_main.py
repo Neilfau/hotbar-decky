@@ -4,6 +4,7 @@ import functools
 import logging
 import os
 import time
+from pathlib import Path
 
 import aiohttp
 import decky
@@ -12,7 +13,7 @@ import pytest
 import main
 from hotbar.input.device import FakeDevice, InputError
 from hotbar.input.injector import Injector
-from hotbar.store import StoreError
+from hotbar.store import Device, DeviceStore, StoreError
 from phone_client import PhonePairing
 
 STORE_FAILED = {"listening": False, "error": "Key storage unavailable", "devices": [], "pairing": None}
@@ -37,7 +38,7 @@ async def until(condition):
 
 @pytest.fixture
 def decky_env(tmp_path, monkeypatch):
-    """Points the plugin at a temporary settings directory, fake input devices and loopback."""
+    """Points the plugin at a temporary state directory and settings directory, fake input devices and loopback."""
     env = type("Env", (), {})()
     env.emitted = []
     env.keyboard, env.pointer = FakeDevice(), FakeDevice()
@@ -45,7 +46,11 @@ def decky_env(tmp_path, monkeypatch):
     async def emit(event, *args):
         env.emitted.append((event, args))
 
-    monkeypatch.setattr(decky, "DECKY_PLUGIN_SETTINGS_DIR", str(tmp_path), raising=False)
+    env.settings = tmp_path / "settings"
+    env.settings.mkdir()
+    env.state = tmp_path / "state"
+    monkeypatch.setattr(decky, "DECKY_PLUGIN_SETTINGS_DIR", str(env.settings), raising=False)
+    monkeypatch.setattr(main, "STATE_DIR", env.state)
     monkeypatch.setattr(decky, "emit", emit, raising=False)
     monkeypatch.setattr(main, "_state", main._State())
     monkeypatch.setattr(main, "BIND_HOST", "127.0.0.1")
@@ -102,7 +107,7 @@ async def test_plugin_pairs_a_phone_and_unload_releases_everything(decky_env):
 
 @run
 async def test_unusable_key_storage_is_reported_and_methods_still_answer(decky_env, monkeypatch):
-    def failing_store(_path):
+    def failing_store(_path, legacy_path=None):
         raise StoreError("cannot create the settings directory")
 
     monkeypatch.setattr(main, "DeviceStore", failing_store)
@@ -217,7 +222,7 @@ async def test_nothing_is_published_when_the_input_device_is_missing(decky_env, 
 
 @run
 async def test_a_stale_service_file_is_removed_when_the_store_fails(decky_env, monkeypatch):
-    def failing_store(_path):
+    def failing_store(_path, legacy_path=None):
         raise StoreError("cannot create the settings directory")
 
     monkeypatch.setattr(main, "DeviceStore", failing_store)
@@ -235,3 +240,35 @@ async def test_a_stale_service_file_is_removed_when_the_input_device_fails(decky
     (decky_env.services / "hotbar.service").write_text("left behind")
     await main.Plugin()._main()
     assert list(decky_env.services.iterdir()) == []
+
+
+def test_the_device_file_lives_in_a_root_owned_folder_outside_the_decky_directories():
+    assert main.STATE_DIR == Path("/home/.hotbar")
+
+
+@run
+async def test_an_existing_device_file_is_moved_into_the_state_directory(decky_env):
+    old = DeviceStore(decky_env.settings / "devices.json")
+    old.add(Device(b"\x11" * 16, b"\x22" * 32, "Phone", 5))
+    plugin = main.Plugin()
+    await plugin._main()
+    try:
+        store = main._state.store
+        assert store.plugin_id == old.plugin_id
+        assert store.devices() == old.devices()
+        assert (await plugin.get_state())["devices"][0]["name"] == "Phone"
+    finally:
+        await plugin._unload()
+    assert not (decky_env.settings / "devices.json").exists()
+    assert os.listdir(decky_env.state) == ["devices.json"]
+    assert (decky_env.state.stat().st_mode & 0o777, (decky_env.state / "devices.json").stat().st_mode & 0o777) == (0o700, 0o600)
+
+
+@run
+async def test_a_state_directory_owned_by_someone_else_reports_unusable_key_storage(decky_env, monkeypatch):
+    decky_env.state.mkdir()
+    monkeypatch.setattr(os, "geteuid", lambda: os.getuid() + 1)
+    plugin = main.Plugin()
+    await plugin._main()
+    assert await plugin.get_state() == STORE_FAILED
+    await plugin._unload()

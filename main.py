@@ -20,6 +20,9 @@ from hotbar.store import DeviceStore, StoreError  # noqa: E402
 BIND_HOST = "0.0.0.0"
 UINPUT_PATH = "/dev/uinput"
 AVAHI_SERVICES_DIR = advertise.DEFAULT_SERVICES_DIR
+# Root-owned and outside every folder Decky manages: Decky gives those to the desktop user on each load,
+# so a key file there could be read by any process of that user.
+STATE_DIR = Path("/home/.hotbar")
 
 
 class _State:
@@ -63,7 +66,10 @@ class Plugin:
         selfcheck.run(decky.logger, uinput_path=UINPUT_PATH, services_dir=AVAHI_SERVICES_DIR)
         advertise.withdraw(AVAHI_SERVICES_DIR, decky.logger)  # a file left by a crash names a dead port
         try:
-            _state.store = DeviceStore(Path(decky.DECKY_PLUGIN_SETTINGS_DIR) / "devices.json")
+            _state.store = DeviceStore(
+                STATE_DIR / "devices.json",
+                legacy_path=Path(decky.DECKY_PLUGIN_SETTINGS_DIR) / "devices.json",
+            )
         except StoreError:
             _state.error = "Key storage unavailable"
             decky.logger.error("could not open the device file")

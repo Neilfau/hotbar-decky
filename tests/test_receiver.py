@@ -919,6 +919,51 @@ def test_total_cap_evicts_the_oldest_overall():
     assert issued[1] not in receiver.challenges and issued[2] in receiver.challenges
 
 
+@pytest.mark.parametrize("order", ["round robin", "one address at a time"])
+def test_total_cap_never_takes_a_challenge_from_an_address_holding_fewer_than_the_flooders(order):
+    receiver, _ = make()
+    phone = receiver.issue_challenge("10.0.0.99", NOW)
+    flooders = 17
+    sequence = range(flooders * c.CHALLENGE_MAX_PER_ADDRESS)
+    owners = [i % flooders if order == "round robin" else i // c.CHALLENGE_MAX_PER_ADDRESS for i in sequence]
+    for i, owner in zip(sequence, owners, strict=True):
+        receiver.issue_challenge(f"10.1.0.{owner}", NOW + 1 + i)
+        assert phone in receiver.challenges
+    assert len(receiver.challenges) == c.CHALLENGE_MAX_TOTAL
+    held = [sum(v.address == f"10.1.0.{n}" for v in receiver.challenges.values()) for n in range(flooders)]
+    assert max(held) <= c.CHALLENGE_MAX_PER_ADDRESS and sum(held) == c.CHALLENGE_MAX_TOTAL - 1
+
+
+def test_total_cap_tie_evicts_the_oldest_challenge_overall():
+    receiver, _ = make()
+    addresses = [f"10.0.0.{n}" for n in range(c.CHALLENGE_MAX_TOTAL // 2)]
+    issued = [receiver.issue_challenge(address, NOW + i) for i, address in enumerate(addresses * 2)]
+    assert len(receiver.challenges) == c.CHALLENGE_MAX_TOTAL
+    receiver.issue_challenge("10.9.9.9", NOW + 300)
+    assert issued[0] not in receiver.challenges and issued[1] in receiver.challenges
+    receiver.issue_challenge("10.9.9.9", NOW + 301)
+    assert issued[1] not in receiver.challenges and issued[2] in receiver.challenges
+
+
+def test_total_cap_tie_goes_to_the_address_whose_oldest_challenge_comes_first():
+    receiver, _ = make()
+    single = receiver.issue_challenge("10.0.0.1", NOW)
+    a1 = receiver.issue_challenge("10.0.0.2", NOW + 1)
+    b1 = receiver.issue_challenge("10.0.0.3", NOW + 2)
+    b2 = receiver.issue_challenge("10.0.0.3", NOW + 3)
+    a2 = receiver.issue_challenge("10.0.0.2", NOW + 4)
+    for n in range(c.CHALLENGE_MAX_TOTAL - 5):
+        receiver.issue_challenge(f"10.1.{n // 256}.{n % 256}", NOW + 5 + n)
+    assert len(receiver.challenges) == c.CHALLENGE_MAX_TOTAL
+    # Two addresses hold two each and the rest hold one: the single older challenge is not the one that goes.
+    receiver.issue_challenge("10.9.9.1", NOW + 300)
+    assert a1 not in receiver.challenges and {single, a2, b1, b2} <= receiver.challenges.keys()
+    receiver.issue_challenge("10.9.9.2", NOW + 301)
+    assert b1 not in receiver.challenges and {single, a2, b2} <= receiver.challenges.keys()
+    receiver.issue_challenge("10.9.9.3", NOW + 302)
+    assert single not in receiver.challenges and {a2, b2} <= receiver.challenges.keys()
+
+
 def test_an_evicted_challenge_no_longer_registers():
     receiver, _ = make()
     first = receiver.issue_challenge("10.0.0.1", NOW)
