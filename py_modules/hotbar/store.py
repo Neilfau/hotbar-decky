@@ -129,7 +129,7 @@ class DeviceStore:
                 info = os.fstat(fd)
                 if info.st_uid != os.geteuid():
                     raise StoreError("the state directory belongs to another user")
-                if stat.S_IMODE(info.st_mode) & 0o077:
+                if stat.S_IMODE(info.st_mode) != 0o700:
                     os.fchmod(fd, 0o700)
             finally:
                 os.close(fd)

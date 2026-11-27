@@ -1,6 +1,7 @@
 # Tests for the device key file: permissions, durability, failure handling and recovery.
 import json
 import os
+import stat
 
 import pytest
 
@@ -349,6 +350,13 @@ def test_a_directory_with_a_wider_mode_is_set_back_to_owner_only(path):
     store = DeviceStore(path)
     assert mode(path.parent) == 0o700
     assert DeviceStore(path).plugin_id == store.plugin_id
+
+
+def test_a_directory_with_a_special_mode_bit_is_set_back_to_owner_only(path):
+    path.parent.mkdir()
+    path.parent.chmod(0o1700)
+    DeviceStore(path)
+    assert stat.S_IMODE(path.parent.stat().st_mode) == 0o700
 
 
 def test_a_directory_owned_by_someone_else_is_refused_and_left_alone(path, monkeypatch):
